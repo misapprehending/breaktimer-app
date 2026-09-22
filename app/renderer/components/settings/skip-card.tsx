@@ -1,5 +1,5 @@
+import { NotificationType, Settings } from "../../../types/settings";
 import SettingsCard from "./settings-card";
-import { Settings } from "../../../types/settings";
 
 interface SkipCardProps {
   settingsDraft: Settings;
@@ -13,7 +13,11 @@ export default function SkipCard({
   return (
     <SettingsCard
       title="Skip"
-      helperText="Allow skipping breaks entirely without rescheduling them."
+      helperText={
+        settingsDraft.notificationType === NotificationType.Reminder
+          ? "Allow skipping this stand reminder and starting a new seated interval."
+          : "Allow skipping breaks entirely without rescheduling them."
+      }
       toggle={{
         checked:
           settingsDraft.skipBreakEnabled &&

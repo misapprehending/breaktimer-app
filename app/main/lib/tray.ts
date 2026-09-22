@@ -3,11 +3,13 @@ import log from "electron-log";
 import moment from "moment";
 import path from "path";
 import packageJson from "../../../package.json";
-import { TrayTextMode } from "../../types/settings";
+import { NotificationType, TrayTextMode } from "../../types/settings";
 import {
   checkIdle,
   checkInWorkingHours,
   getBreakTime,
+  getPausedRemainingSeconds,
+  getStandingRemainingSeconds,
   getTimeSinceLastCompletedBreak,
   isHavingBreak,
   startBreakNow,
@@ -82,7 +84,21 @@ function getTrayTitle(): string | null {
   if (!settings.trayTextEnabled) return null;
   if (!settings.breaksEnabled) return null;
   if (!checkInWorkingHours()) return null;
-  if (isHavingBreak()) return null;
+
+  const reminderMode = settings.notificationType === NotificationType.Reminder;
+
+  if (isHavingBreak()) {
+    if (!reminderMode) return null;
+
+    const standingRemaining = getStandingRemainingSeconds();
+    if (standingRemaining === null) return null;
+    return ` ${formatCompactDuration(standingRemaining)}`;
+  }
+
+  const pausedRemaining = getPausedRemainingSeconds();
+  if (pausedRemaining !== null) {
+    return ` ${formatCompactDuration(pausedRemaining)}`;
+  }
 
   switch (settings.trayTextMode) {
     case TrayTextMode.TimeToNextBreak: {
@@ -191,17 +207,28 @@ export function buildTray(): void {
   const inWorkingHours = checkInWorkingHours();
   const idle = checkIdle();
   const havingBreak = isHavingBreak();
+  const reminderMode = settings.notificationType === NotificationType.Reminder;
+  const pausedRemaining = getPausedRemainingSeconds();
+  const standingRemaining = getStandingRemainingSeconds();
   const minsLeft = breakTime?.diff(moment(), "minutes");
 
   let nextBreak = "";
 
-  if (minsLeft !== undefined) {
+  if (pausedRemaining !== null) {
+    nextBreak = `Sitting paused · ${formatCompactDuration(pausedRemaining)} left`;
+  } else if (havingBreak && reminderMode) {
+    nextBreak =
+      standingRemaining !== null
+        ? `Standing · ${formatCompactDuration(standingRemaining)} left`
+        : "Time to stand";
+  } else if (minsLeft !== undefined) {
+    const action = reminderMode ? "stand" : "break";
     if (minsLeft > 1) {
-      nextBreak = `Next break in ${minsLeft} minutes`;
+      nextBreak = `Next ${action} in ${minsLeft} minutes`;
     } else if (minsLeft === 1) {
-      nextBreak = `Next break in 1 minute`;
+      nextBreak = `Next ${action} in 1 minute`;
     } else {
-      nextBreak = `Next break in less than a minute`;
+      nextBreak = `Next ${action} in less than a minute`;
     }
   }
 
@@ -210,11 +237,7 @@ export function buildTray(): void {
   const contextMenu = Menu.buildFromTemplate([
     {
       label: nextBreak,
-      visible:
-        breakTime !== null &&
-        inWorkingHours &&
-        settings.breaksEnabled &&
-        !havingBreak,
+      visible: Boolean(nextBreak) && inWorkingHours && settings.breaksEnabled,
       enabled: false,
     },
     {
@@ -229,7 +252,7 @@ export function buildTray(): void {
     },
     {
       label: `Idle`,
-      visible: idle,
+      visible: idle && pausedRemaining === null,
       enabled: false,
     },
     { type: "separator" },
@@ -265,10 +288,12 @@ export function buildTray(): void {
       visible: breaksEnabled,
     },
     {
-      label: "Start break now",
+      label: reminderMode ? "Stand now" : "Start break now",
       visible: !havingBreak,
       click: () => {
-        log.info("Start break now selected");
+        log.info(
+          reminderMode ? "Stand now selected" : "Start break now selected",
+        );
         startBreakNow();
       },
     },

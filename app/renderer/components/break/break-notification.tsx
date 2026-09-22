@@ -17,6 +17,10 @@ interface BreakNotificationProps {
   timeSinceLastBreak: number | null;
   textColor: string;
   backgroundColor: string;
+  waitForConfirm?: boolean;
+  title?: string;
+  confirmLabel?: string;
+  timeSinceNoun?: string;
 }
 
 export function BreakNotification({
@@ -29,11 +33,20 @@ export function BreakNotification({
   timeSinceLastBreak,
   textColor,
   backgroundColor,
+  waitForConfirm = false,
+  title,
+  confirmLabel = "Start",
+  timeSinceNoun = "break",
 }: BreakNotificationProps) {
   const [phase, setPhase] = useState<"grace" | "countdown">("grace");
   const [msRemaining, setMsRemaining] = useState<number>(0);
 
   useEffect(() => {
+    if (waitForConfirm) {
+      setPhase("grace");
+      return;
+    }
+
     const startTime = moment();
     let timeoutId: NodeJS.Timeout;
 
@@ -61,7 +74,7 @@ export function BreakNotification({
         clearTimeout(timeoutId);
       }
     };
-  }, [onCountdownOver]);
+  }, [onCountdownOver, waitForConfirm]);
 
   const secondsRemaining = Math.ceil(msRemaining / 1000);
   const countdownDurationMs = TOTAL_COUNTDOWN_MS - GRACE_PERIOD_MS;
@@ -101,7 +114,9 @@ export function BreakNotification({
             style={{ color: textColor }}
           >
             {phase === "grace"
-              ? "Start your break when ready..."
+              ? waitForConfirm
+                ? title || "Time to stand when ready..."
+                : "Start your break when ready..."
               : `Break starting in ${secondsRemaining}s...`}
           </h2>
           {timeSinceLastBreak !== null && (
@@ -109,7 +124,7 @@ export function BreakNotification({
               className="text-sm opacity-80 font-medium"
               style={{ color: textColor }}
             >
-              {formatTimeSinceLastBreak(timeSinceLastBreak)}
+              {formatTimeSinceLastBreak(timeSinceLastBreak, timeSinceNoun)}
             </p>
           )}
         </div>
@@ -129,7 +144,7 @@ export function BreakNotification({
                 borderColor: "rgba(255, 255, 255, 0.2)",
               }}
             >
-              Start
+              {confirmLabel}
             </Button>
           </div>
           {postponeBreakEnabled && (

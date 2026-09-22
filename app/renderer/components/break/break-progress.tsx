@@ -14,6 +14,8 @@ interface BreakProgressProps {
   textColor: string;
   isClosing?: boolean;
   sharedBreakEndTime?: number | null;
+  variant?: "full" | "hud";
+  playStartSound?: boolean;
 }
 
 export function BreakProgress({
@@ -25,6 +27,8 @@ export function BreakProgress({
   textColor,
   isClosing = false,
   sharedBreakEndTime = null,
+  variant = "full",
+  playStartSound = true,
 }: BreakProgressProps) {
   const [timeRemaining, setTimeRemaining] = useState<TimeRemaining | null>(
     null,
@@ -46,6 +50,7 @@ export function BreakProgress({
 
     // Only play start sound from primary window and only once per break
     if (
+      playStartSound &&
       isPrimaryWindow &&
       settings.soundType !== SoundType.None &&
       !soundPlayedRef.current
@@ -112,6 +117,7 @@ export function BreakProgress({
     breakStartTime,
     isPrimaryWindow,
     sharedBreakEndTime,
+    playStartSound,
   ]);
 
   const fadeIn = {
@@ -125,6 +131,61 @@ export function BreakProgress({
   }
 
   const progressPercentage = (progress || 0) * 100;
+  const remainingMinutes = Math.floor(
+    timeRemaining.hours * 60 + timeRemaining.minutes,
+  );
+  const remainingSeconds = Math.floor(timeRemaining.seconds);
+  const remainingLabel = `${String(remainingMinutes).padStart(2, "0")}:${String(
+    remainingSeconds,
+  ).padStart(2, "0")}`;
+
+  if (variant === "hud") {
+    return (
+      <motion.div
+        className="flex items-center justify-between h-full w-full px-3 relative overflow-hidden rounded-xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isClosing ? 0 : 1 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div className="flex flex-col min-w-0 pr-2">
+          <span
+            className="text-[11px] font-medium opacity-80 leading-none"
+            style={{ color: textColor }}
+          >
+            Standing
+          </span>
+          <span
+            className="text-base font-semibold tabular-nums leading-tight"
+            style={{ color: textColor }}
+          >
+            {remainingLabel}
+          </span>
+        </div>
+        {endBreakEnabled && (
+          <Button
+            size="sm"
+            className="!bg-transparent hover:!bg-black/10 active:!bg-black/20 border-white/20 h-7 px-2"
+            onClick={onEndBreak}
+            variant="outline"
+            style={{
+              color: textColor,
+              borderColor: "rgba(255, 255, 255, 0.2)",
+            }}
+          >
+            Sit
+          </Button>
+        )}
+        <div
+          className="absolute bottom-0 left-0 h-1"
+          style={{
+            backgroundColor: textColor,
+            width: `${progressPercentage}%`,
+            opacity: 0.8,
+          }}
+        />
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

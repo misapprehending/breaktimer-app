@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import SettingsCard from "./settings-card";
 import TimeInput from "./time-input";
-import { Settings } from "../../../types/settings";
+import { NotificationType, Settings } from "../../../types/settings";
 
 interface SnoozeCardProps {
   settingsDraft: Settings;
@@ -26,7 +26,11 @@ export default function SnoozeCard({
   return (
     <SettingsCard
       title="Snooze"
-      helperText="Snoozing allows you to postpone breaks when busy."
+      helperText={
+        settingsDraft.notificationType === NotificationType.Reminder
+          ? "Postpone the stand reminder when you are not ready."
+          : "Snoozing allows you to postpone breaks when busy."
+      }
       toggle={{
         checked:
           settingsDraft.postponeBreakEnabled &&

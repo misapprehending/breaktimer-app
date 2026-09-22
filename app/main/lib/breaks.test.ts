@@ -95,3 +95,151 @@ describe("system suspension", () => {
     expect(breaks.getTimeSinceLastCompletedBreak()).toBe(0);
   });
 });
+
+describe("reminder sitting idle pause", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-24T09:00:00Z"));
+    vi.resetModules();
+    vi.clearAllMocks();
+    harness.getSystemIdleState.mockReturnValue("active");
+    harness.powerMonitor = {
+      getSystemIdleState: harness.getSystemIdleState,
+    };
+    harness.settings = {
+      ...defaultSettings,
+      notificationType: NotificationType.Reminder,
+      breakFrequencySeconds: 60,
+      breakLengthSeconds: 20,
+      idleResetLengthSeconds: 5,
+      idleResetEnabled: false,
+      workingHoursEnabled: false,
+    };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("creates overlay windows for reminder mode", async () => {
+    const breaks = await import("./breaks.js");
+
+    breaks.startBreakNow();
+
+    expect(harness.createBreakWindows).toHaveBeenCalledOnce();
+    expect(breaks.isHavingBreak()).toBe(true);
+  });
+
+  it("pauses remaining seated time while idle and resumes it", async () => {
+    const breaks = await import("./breaks.js");
+    breaks.initBreaks(harness.powerMonitor);
+    vi.advanceTimersByTime(20_000);
+
+    expect(breaks.getBreakTime()?.diff(moment(), "seconds")).toBe(40);
+
+    harness.getSystemIdleState.mockReturnValue("idle");
+    vi.advanceTimersByTime(1_000);
+
+    expect(breaks.isSittingTimerPaused()).toBe(true);
+    expect(breaks.getPausedRemainingSeconds()).toBeGreaterThanOrEqual(39);
+    expect(breaks.getPausedRemainingSeconds()).toBeLessThanOrEqual(40);
+    expect(breaks.getBreakTime()).toBeNull();
+    expect(breaks.isHavingBreak()).toBe(false);
+    expect(breaks.getTimeSinceLastCompletedBreak()).toBeGreaterThan(0);
+
+    vi.advanceTimersByTime(15_000);
+    expect(breaks.getPausedRemainingSeconds()).toBeGreaterThanOrEqual(39);
+    expect(breaks.getPausedRemainingSeconds()).toBeLessThanOrEqual(40);
+
+    harness.getSystemIdleState.mockReturnValue("active");
+    vi.advanceTimersByTime(1_000);
+
+    expect(breaks.isSittingTimerPaused()).toBe(false);
+    expect(
+      breaks.getBreakTime()?.diff(moment(), "seconds"),
+    ).toBeGreaterThanOrEqual(39);
+    expect(
+      breaks.getBreakTime()?.diff(moment(), "seconds"),
+    ).toBeLessThanOrEqual(40);
+    expect(harness.createBreakWindows).not.toHaveBeenCalled();
+  });
+
+  it("does not treat idle as a completed sit interval", async () => {
+    const breaks = await import("./breaks.js");
+    breaks.initBreaks(harness.powerMonitor);
+    vi.advanceTimersByTime(10_000);
+
+    harness.getSystemIdleState.mockReturnValue("idle");
+    vi.advanceTimersByTime(1_000);
+
+    expect(breaks.getTimeSinceLastCompletedBreak()).toBeGreaterThan(5);
+    expect(breaks.getPausedRemainingSeconds()).not.toBeNull();
+  });
+
+  it("pauses seated time across system suspension", async () => {
+    const breaks = await import("./breaks.js");
+    breaks.initBreaks(harness.powerMonitor);
+    vi.advanceTimersByTime(1000);
+
+    vi.setSystemTime(new Date("2026-08-24T09:02:00Z"));
+    vi.advanceTimersByTime(1000);
+
+    expect(breaks.getTimeSinceLastCompletedBreak()).toBeGreaterThan(0);
+    expect(breaks.isSittingTimerPaused()).toBe(false);
+    const remaining = breaks.getBreakTime()?.diff(moment(), "seconds") ?? -1;
+    expect(remaining).toBeGreaterThanOrEqual(58);
+    expect(remaining).toBeLessThanOrEqual(60);
+  });
+
+  it("counts a short standing session as complete", async () => {
+    const breaks = await import("./breaks.js");
+    breaks.startBreakNow();
+
+    breaks.completeBreakTracking(1000);
+
+    expect(breaks.getTimeSinceLastCompletedBreak()).toBe(0);
+  });
+});
+
+describe("popup idle reset", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-24T09:00:00Z"));
+    vi.resetModules();
+    vi.clearAllMocks();
+    harness.getSystemIdleState.mockReturnValue("active");
+    harness.powerMonitor = {
+      getSystemIdleState: harness.getSystemIdleState,
+    };
+    harness.settings = {
+      ...defaultSettings,
+      notificationType: NotificationType.Popup,
+      breakFrequencySeconds: 60,
+      idleResetLengthSeconds: 5,
+      idleResetEnabled: true,
+      workingHoursEnabled: false,
+    };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("still auto-resets popup breaks after idle", async () => {
+    const breaks = await import("./breaks.js");
+    breaks.initBreaks(harness.powerMonitor);
+    vi.advanceTimersByTime(20_000);
+
+    harness.getSystemIdleState.mockReturnValue("idle");
+    vi.advanceTimersByTime(1_000);
+
+    expect(breaks.getBreakTime()).toBeNull();
+    expect(breaks.isSittingTimerPaused()).toBe(false);
+
+    harness.getSystemIdleState.mockReturnValue("active");
+    vi.advanceTimersByTime(1_000);
+
+    expect(breaks.getTimeSinceLastCompletedBreak()).toBe(0);
+    expect(breaks.getBreakTime()?.diff(moment(), "seconds")).toBe(60);
+  });
+});

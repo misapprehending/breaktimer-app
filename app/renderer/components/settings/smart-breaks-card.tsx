@@ -1,8 +1,8 @@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { NotificationType, Settings } from "../../../types/settings";
 import SettingsCard from "./settings-card";
 import TimeInput from "./time-input";
-import { Settings } from "../../../types/settings";
 
 interface SmartBreaksCardProps {
   settingsDraft: Settings;
@@ -15,15 +15,26 @@ export default function SmartBreaksCard({
   onSwitchChange,
   onDateChange,
 }: SmartBreaksCardProps) {
+  const isReminder =
+    settingsDraft.notificationType === NotificationType.Reminder;
+
   return (
     <SettingsCard
-      title="Smart Breaks"
-      helperText="Automatically detect natural breaks and reset the break timer."
-      toggle={{
-        checked: settingsDraft.idleResetEnabled,
-        onCheckedChange: (checked) =>
-          onSwitchChange("idleResetEnabled", checked),
-      }}
+      title={isReminder ? "Idle pause" : "Smart Breaks"}
+      helperText={
+        isReminder
+          ? "Pause the seated timer when you are idle. It resumes with the remaining time when you return."
+          : "Automatically detect natural breaks and reset the break timer."
+      }
+      toggle={
+        isReminder
+          ? undefined
+          : {
+              checked: settingsDraft.idleResetEnabled,
+              onCheckedChange: (checked) =>
+                onSwitchChange("idleResetEnabled", checked),
+            }
+      }
     >
       <div className="space-y-4">
         <div className="space-y-2">
@@ -38,19 +49,21 @@ export default function SmartBreaksCard({
               date.setSeconds(seconds % 60);
               onDateChange("idleResetLength", date);
             }}
-            disabled={!settingsDraft.idleResetEnabled}
+            disabled={!isReminder && !settingsDraft.idleResetEnabled}
           />
         </div>
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={settingsDraft.idleResetNotification}
-            onCheckedChange={(checked) =>
-              onSwitchChange("idleResetNotification", checked)
-            }
-            disabled={!settingsDraft.idleResetEnabled}
-          />
-          <Label>Show notification when break automatically detected</Label>
-        </div>
+        {!isReminder && (
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={settingsDraft.idleResetNotification}
+              onCheckedChange={(checked) =>
+                onSwitchChange("idleResetNotification", checked)
+              }
+              disabled={!settingsDraft.idleResetEnabled}
+            />
+            <Label>Show notification when break automatically detected</Label>
+          </div>
+        )}
       </div>
     </SettingsCard>
   );

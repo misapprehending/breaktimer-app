@@ -1,13 +1,16 @@
-export function formatTimeSinceLastBreak(seconds: number): string {
+export function formatTimeSinceLastBreak(
+  seconds: number,
+  noun = "break",
+): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
 
   if (hours > 0) {
-    return `${hours}h${minutes > 0 ? ` ${minutes}m` : ""} since last break`;
+    return `${hours}h${minutes > 0 ? ` ${minutes}m` : ""} since last ${noun}`;
   } else if (minutes > 0) {
-    return `${minutes}m since last break`;
+    return `${minutes}m since last ${noun}`;
   } else {
-    return "Less than 1m since last break";
+    return `Less than 1m since last ${noun}`;
   }
 }
 

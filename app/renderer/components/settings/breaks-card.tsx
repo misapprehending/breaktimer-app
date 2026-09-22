@@ -8,7 +8,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { NotificationType, Settings } from "../../../types/settings";
+import {
+  NotificationType,
+  Settings,
+  usesBreakWindows,
+} from "../../../types/settings";
 import SettingsCard from "./settings-card";
 import TimeInput from "./time-input";
 
@@ -30,9 +34,17 @@ export default function BreaksCard({
   onTextChange,
   onSwitchChange,
 }: BreaksCardProps) {
+  const isReminder =
+    settingsDraft.notificationType === NotificationType.Reminder;
+
   return (
     <SettingsCard
       title="Breaks"
+      helperText={
+        isReminder
+          ? "A non-blocking reminder to stand, then a tiny countdown while you stay standing."
+          : undefined
+      }
       toggle={{
         checked: settingsDraft.breaksEnabled,
         onCheckedChange: (checked) => onSwitchChange("breaksEnabled", checked),
@@ -47,12 +59,15 @@ export default function BreaksCard({
               onValueChange={onNotificationTypeChange}
               disabled={!settingsDraft.breaksEnabled}
             >
-              <SelectTrigger style={{ width: 145 }}>
+              <SelectTrigger style={{ width: 165 }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={NotificationType.Popup}>
                   Popup break
+                </SelectItem>
+                <SelectItem value={NotificationType.Reminder}>
+                  Reminder overlay
                 </SelectItem>
                 <SelectItem value={NotificationType.Notification}>
                   Simple notification
@@ -61,7 +76,9 @@ export default function BreaksCard({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Frequency</Label>
+            <Label className="text-sm font-medium">
+              {isReminder ? "Seated time" : "Frequency"}
+            </Label>
             <TimeInput
               precision="seconds"
               value={settingsDraft.breakFrequencySeconds}
@@ -76,7 +93,9 @@ export default function BreaksCard({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Length</Label>
+            <Label className="text-sm font-medium">
+              {isReminder ? "Standing time" : "Length"}
+            </Label>
             <TimeInput
               precision="seconds"
               value={settingsDraft.breakLengthSeconds}
@@ -89,7 +108,7 @@ export default function BreaksCard({
               }}
               disabled={
                 !settingsDraft.breaksEnabled ||
-                settingsDraft.notificationType !== NotificationType.Popup
+                !usesBreakWindows(settingsDraft.notificationType)
               }
             />
           </div>
@@ -113,7 +132,11 @@ export default function BreaksCard({
             value={settingsDraft.breakMessage}
             onChange={onTextChange.bind(null, "breakMessage")}
             disabled={!settingsDraft.breaksEnabled}
-            placeholder="Enter your break message..."
+            placeholder={
+              isReminder
+                ? "Optional note shown in the stand reminder..."
+                : "Enter your break message..."
+            }
           />
         </div>
       </div>
