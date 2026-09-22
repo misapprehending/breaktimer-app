@@ -8,6 +8,7 @@ import {
   NotificationType,
   Settings,
   SoundType,
+  isDeskReminderType,
   usesBreakWindows,
 } from "../../types/settings";
 import { sendIpc } from "./ipc";
@@ -39,6 +40,7 @@ let startedFromTray = false;
 let lastCompletedBreakTime: Date | null = new Date();
 let currentBreakStartTime: Date | null = null;
 let pausedRemainingSeconds: number | null = null;
+let overlayPhase: "stand" | "move" = "stand";
 
 export function getBreakTime(): BreakTime {
   return breakTime;
@@ -74,13 +76,25 @@ export function getStandingRemainingSeconds(): number | null {
     return null;
   }
 
-  const requiredDurationMs = getSettings().breakLengthSeconds * 1000;
+  const settings = getSettings();
+  const requiredSeconds =
+    overlayPhase === "move"
+      ? settings.moveLengthSeconds
+      : settings.breakLengthSeconds;
   const elapsedMs = Date.now() - currentBreakStartTime.getTime();
-  return Math.max(0, Math.round((requiredDurationMs - elapsedMs) / 1000));
+  return Math.max(0, Math.round((requiredSeconds * 1000 - elapsedMs) / 1000));
+}
+
+export function getOverlayPhase(): "stand" | "move" {
+  return overlayPhase;
+}
+
+export function getMoveLengthSeconds(): number {
+  return getSecondsFromSettings(getSettings().moveLengthSeconds);
 }
 
 function isReminderMode(settings: Settings = getSettings()): boolean {
-  return settings.notificationType === NotificationType.Reminder;
+  return isDeskReminderType(settings.notificationType);
 }
 
 function clearSittingPause(): void {
@@ -89,6 +103,29 @@ function clearSittingPause(): void {
 
 export function startBreakTracking(): void {
   currentBreakStartTime = new Date();
+  overlayPhase = "stand";
+}
+
+export function startMovePhase(): number {
+  currentBreakStartTime = new Date();
+  overlayPhase = "move";
+
+  const settings = getSettings();
+  const moveEndTime = Date.now() + getMoveLengthSeconds() * 1000;
+
+  if (settings.soundType !== SoundType.None) {
+    sendIpc(
+      IpcChannel.SoundStartPlay,
+      settings.soundType,
+      settings.breakSoundVolume,
+    );
+  }
+
+  log.info(
+    `Move phase started [seconds=${getMoveLengthSeconds()}] [ends=${new Date(moveEndTime).toISOString()}]`,
+  );
+  buildTray();
+  return moveEndTime;
 }
 
 export function resetTimeSinceLastBreak(context: string): void {
@@ -212,6 +249,7 @@ export function endPopupBreak(): void {
   const now = moment();
   havingBreak = false;
   startedFromTray = false;
+  overlayPhase = "stand";
 
   // If there's no future break scheduled, create a normal break
   if (!existingBreakTime || existingBreakTime <= now) {
@@ -232,6 +270,7 @@ export function getAllowPostpone(): boolean {
 export function postponeBreak(action = "snoozed"): void {
   postponedCount++;
   havingBreak = false;
+  overlayPhase = "stand";
   log.info(`Break ${action} [count=${postponedCount}]`);
 
   if (action === "skipped") {
@@ -253,7 +292,8 @@ function doBreak(): void {
   if (
     settings.notificationType === NotificationType.Notification ||
     startedFromTray ||
-    (settings.immediatelyStartBreaks && !isReminderMode(settings))
+    (settings.immediatelyStartBreaks &&
+      !isDeskReminderType(settings.notificationType))
   ) {
     startBreakTracking();
   }

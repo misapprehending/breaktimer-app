@@ -1,6 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { NotificationType, Settings } from "../../../types/settings";
+import { Settings, isDeskReminderType } from "../../../types/settings";
 import SettingsCard from "./settings-card";
 import TimeInput from "./time-input";
 
@@ -15,8 +15,7 @@ export default function SmartBreaksCard({
   onSwitchChange,
   onDateChange,
 }: SmartBreaksCardProps) {
-  const isReminder =
-    settingsDraft.notificationType === NotificationType.Reminder;
+  const isReminder = isDeskReminderType(settingsDraft.notificationType);
 
   return (
     <SettingsCard

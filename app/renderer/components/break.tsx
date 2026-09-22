@@ -1,6 +1,12 @@
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
-import { NotificationType, Settings, SoundType } from "../../types/settings";
+import {
+  NotificationType,
+  Settings,
+  SoundType,
+  isDeskReminderType,
+  usesMovePhase,
+} from "../../types/settings";
 import { BreakNotification } from "./break/break-notification";
 import { BreakProgress } from "./break/break-progress";
 import { isPrimaryBreakWindow } from "./break/break-window";
@@ -18,6 +24,7 @@ export default function Break() {
   const [sharedBreakEndTime, setSharedBreakEndTime] = useState<number | null>(
     null,
   );
+  const [hudPhase, setHudPhase] = useState<"stand" | "move">("stand");
 
   useEffect(() => {
     const init = async () => {
@@ -34,11 +41,11 @@ export default function Break() {
       setTimeSinceLastBreak(timeSince);
 
       // Skip the countdown if immediately start breaks is enabled or started from tray.
-      // Reminder overlay always waits for an explicit stand confirmation.
+      // Desk reminders always wait for an explicit stand confirmation.
       if (
         startedFromTray ||
         (settings.immediatelyStartBreaks &&
-          settings.notificationType !== NotificationType.Reminder)
+          !isDeskReminderType(settings.notificationType))
       ) {
         setCountingDown(false);
       }
@@ -46,18 +53,24 @@ export default function Break() {
       setReady(true);
     };
 
-    // Listen for break start broadcasts from other windows
     const handleBreakStart = (breakEndTime: number) => {
+      setHudPhase("stand");
       setSharedBreakEndTime(breakEndTime);
       setCountingDown(false);
     };
 
-    // Listen for break end broadcasts from other windows
+    const handleBreakMoveStart = (breakEndTime: number) => {
+      setHudPhase("move");
+      setSharedBreakEndTime(breakEndTime);
+      setCountingDown(false);
+    };
+
     const handleBreakEnd = () => {
       setClosing(true);
     };
 
     ipcRenderer.onBreakStart(handleBreakStart);
+    ipcRenderer.onBreakMoveStart(handleBreakMoveStart);
     ipcRenderer.onBreakEnd(handleBreakEnd);
 
     // Delay or the window displays incorrectly.
@@ -102,7 +115,6 @@ export default function Break() {
   }, []);
 
   const handleEndBreak = useCallback(async () => {
-    // Only play end sound from primary window
     const urlParams = new URLSearchParams(window.location.search);
     const windowId = urlParams.get("windowId");
     const isPrimary = windowId === "0" || windowId === null;
@@ -111,16 +123,31 @@ export default function Break() {
       ipcRenderer.invokeEndSound(settings.soundType, settings.breakSoundVolume);
     }
 
-    // Broadcast to all windows to start their closing animations
     await ipcRenderer.invokeBreakEnd();
   }, [settings]);
+
+  const handleHudFinished = useCallback(async () => {
+    if (
+      settings &&
+      usesMovePhase(settings.notificationType) &&
+      hudPhase === "stand"
+    ) {
+      if (isPrimaryBreakWindow(window.location.search)) {
+        await ipcRenderer.invokeBreakMoveStart();
+      }
+      return;
+    }
+
+    await handleEndBreak();
+  }, [handleEndBreak, hudPhase, settings]);
 
   if (settings === null || allowPostpone === null) {
     return null;
   }
 
+  const isDeskReminder = isDeskReminderType(settings.notificationType);
+
   if (countingDown) {
-    const isReminder = settings.notificationType === NotificationType.Reminder;
     return (
       <div
         className="h-full flex items-center justify-center"
@@ -135,26 +162,26 @@ export default function Break() {
             postponeBreakEnabled={
               settings.postponeBreakEnabled &&
               allowPostpone &&
-              (isReminder || !settings.immediatelyStartBreaks)
+              (isDeskReminder || !settings.immediatelyStartBreaks)
             }
             skipBreakEnabled={
               settings.skipBreakEnabled &&
-              (isReminder || !settings.immediatelyStartBreaks)
+              (isDeskReminder || !settings.immediatelyStartBreaks)
             }
             timeSinceLastBreak={timeSinceLastBreak}
             textColor={settings.textColor}
             backgroundColor={settings.backgroundColor}
-            waitForConfirm={isReminder}
-            title={isReminder ? settings.breakTitle : undefined}
-            confirmLabel={isReminder ? "Stand" : "Start"}
-            timeSinceNoun={isReminder ? "stand" : "break"}
+            waitForConfirm={isDeskReminder}
+            title={isDeskReminder ? settings.breakTitle : undefined}
+            confirmLabel={isDeskReminder ? "Stand" : "Start"}
+            timeSinceNoun={isDeskReminder ? "stand" : "break"}
           />
         )}
       </div>
     );
   }
 
-  if (settings.notificationType === NotificationType.Reminder) {
+  if (isDeskReminder) {
     return (
       <div className="h-full w-full flex items-center justify-center">
         <motion.div
@@ -169,16 +196,24 @@ export default function Break() {
         >
           {ready && (
             <BreakProgress
+              key={`${hudPhase}-${sharedBreakEndTime ?? "local"}`}
               breakMessage={settings.breakMessage}
               breakTitle={settings.breakTitle}
               endBreakEnabled={settings.endBreakEnabled}
               onEndBreak={handleEndBreak}
+              onCountdownComplete={handleHudFinished}
               settings={settings}
               textColor={settings.textColor}
               isClosing={closing}
               sharedBreakEndTime={sharedBreakEndTime}
               variant="hud"
               playStartSound={false}
+              hudLabel={hudPhase === "move" ? "Moving" : "Standing"}
+              endButtonLabel={hudPhase === "move" ? "Done" : "Sit"}
+              completeTrackingOnEnd={
+                hudPhase === "move" ||
+                settings.notificationType !== NotificationType.TwentyEightTwo
+              }
             />
           )}
         </motion.div>

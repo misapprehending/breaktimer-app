@@ -10,12 +10,16 @@ interface BreakProgressProps {
   breakTitle: string;
   endBreakEnabled: boolean;
   onEndBreak: () => void;
+  onCountdownComplete?: () => void;
   settings: Settings;
   textColor: string;
   isClosing?: boolean;
   sharedBreakEndTime?: number | null;
   variant?: "full" | "hud";
   playStartSound?: boolean;
+  hudLabel?: string;
+  endButtonLabel?: string;
+  completeTrackingOnEnd?: boolean;
 }
 
 export function BreakProgress({
@@ -23,12 +27,16 @@ export function BreakProgress({
   breakTitle,
   endBreakEnabled,
   onEndBreak,
+  onCountdownComplete,
   settings,
   textColor,
   isClosing = false,
   sharedBreakEndTime = null,
   variant = "full",
   playStartSound = true,
+  hudLabel = "Standing",
+  endButtonLabel = "Sit",
+  completeTrackingOnEnd = true,
 }: BreakProgressProps) {
   const [timeRemaining, setTimeRemaining] = useState<TimeRemaining | null>(
     null,
@@ -81,12 +89,13 @@ export function BreakProgress({
         const now = moment();
 
         if (now > moment(breakEndTime)) {
-          // Always track break completion, regardless of which window triggers it
-          const breakDurationMs =
-            new Date().getTime() - breakStartTime.getTime();
-          ipcRenderer.invokeCompleteBreakTracking(breakDurationMs);
+          if (completeTrackingOnEnd) {
+            const breakDurationMs =
+              new Date().getTime() - breakStartTime.getTime();
+            ipcRenderer.invokeCompleteBreakTracking(breakDurationMs);
+          }
 
-          onEndBreak();
+          (onCountdownComplete ?? onEndBreak)();
           return;
         }
 
@@ -113,11 +122,13 @@ export function BreakProgress({
     };
   }, [
     onEndBreak,
+    onCountdownComplete,
     settings,
     breakStartTime,
     isPrimaryWindow,
     sharedBreakEndTime,
     playStartSound,
+    completeTrackingOnEnd,
   ]);
 
   const fadeIn = {
@@ -152,7 +163,7 @@ export function BreakProgress({
             className="text-[11px] font-medium opacity-80 leading-none"
             style={{ color: textColor }}
           >
-            Standing
+            {hudLabel}
           </span>
           <span
             className="text-base font-semibold tabular-nums leading-tight"
@@ -172,7 +183,7 @@ export function BreakProgress({
               borderColor: "rgba(255, 255, 255, 0.2)",
             }}
           >
-            Sit
+            {endButtonLabel}
           </Button>
         )}
         <div

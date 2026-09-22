@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, IpcMainInvokeEvent, screen } from "electron";
 import log from "electron-log";
 import { IpcChannel } from "../../types/ipc";
-import { NotificationType, Settings, SoundType } from "../../types/settings";
+import { Settings, SoundType, isDeskReminderType } from "../../types/settings";
 import {
   completeBreakTracking,
   getAllowPostpone,
@@ -9,6 +9,7 @@ import {
   getTimeSinceLastBreak,
   postponeBreak,
   startBreakTracking,
+  startMovePhase,
   wasStartedFromTray,
 } from "./breaks";
 import {
@@ -54,6 +55,12 @@ ipcMain.handle(IpcChannel.BreakStart, (): void => {
   const breakLengthMs = getBreakLengthSeconds() * 1000;
   const breakEndTime = Date.now() + breakLengthMs;
   sendIpc(IpcChannel.BreakStart, breakEndTime);
+});
+
+ipcMain.handle(IpcChannel.BreakMoveStart, (): void => {
+  log.info(IpcChannel.BreakMoveStart);
+  const moveEndTime = startMovePhase();
+  sendIpc(IpcChannel.BreakMoveStart, moveEndTime);
 });
 
 ipcMain.handle(IpcChannel.BreakEnd, (): void => {
@@ -103,7 +110,7 @@ ipcMain.handle(
       const display = screen.getDisplayNearestPoint(window.getBounds());
       const settings = getSettings();
 
-      if (settings.notificationType === NotificationType.Reminder) {
+      if (isDeskReminderType(settings.notificationType)) {
         const hudBounds = getStandingHudBounds(display);
         window.setBounds(hudBounds);
         return;
