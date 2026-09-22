@@ -3,11 +3,12 @@ import log from "electron-log";
 import moment from "moment";
 import path from "path";
 import packageJson from "../../../package.json";
-import { NotificationType, TrayTextMode } from "../../types/settings";
+import { TrayTextMode, isDeskReminderType } from "../../types/settings";
 import {
   checkIdle,
   checkInWorkingHours,
   getBreakTime,
+  getOverlayPhase,
   getPausedRemainingSeconds,
   getStandingRemainingSeconds,
   getTimeSinceLastCompletedBreak,
@@ -85,7 +86,7 @@ function getTrayTitle(): string | null {
   if (!settings.breaksEnabled) return null;
   if (!checkInWorkingHours()) return null;
 
-  const reminderMode = settings.notificationType === NotificationType.Reminder;
+  const reminderMode = isDeskReminderType(settings.notificationType);
 
   if (isHavingBreak()) {
     if (!reminderMode) return null;
@@ -207,7 +208,7 @@ export function buildTray(): void {
   const inWorkingHours = checkInWorkingHours();
   const idle = checkIdle();
   const havingBreak = isHavingBreak();
-  const reminderMode = settings.notificationType === NotificationType.Reminder;
+  const reminderMode = isDeskReminderType(settings.notificationType);
   const pausedRemaining = getPausedRemainingSeconds();
   const standingRemaining = getStandingRemainingSeconds();
   const minsLeft = breakTime?.diff(moment(), "minutes");
@@ -217,9 +218,10 @@ export function buildTray(): void {
   if (pausedRemaining !== null) {
     nextBreak = `Sitting paused · ${formatCompactDuration(pausedRemaining)} left`;
   } else if (havingBreak && reminderMode) {
+    const phaseLabel = getOverlayPhase() === "move" ? "Moving" : "Standing";
     nextBreak =
       standingRemaining !== null
-        ? `Standing · ${formatCompactDuration(standingRemaining)} left`
+        ? `${phaseLabel} · ${formatCompactDuration(standingRemaining)} left`
         : "Time to stand";
   } else if (minsLeft !== undefined) {
     const action = reminderMode ? "stand" : "break";

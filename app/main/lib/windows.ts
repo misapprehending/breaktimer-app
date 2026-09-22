@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Display, Rectangle, screen } from "electron";
 import log from "electron-log";
 import path from "path";
-import { NotificationType } from "../../types/settings";
+import { isDeskReminderType } from "../../types/settings";
 import { endPopupBreak, wasStartedFromTray } from "./breaks";
 import { getSettings } from "./store";
 
@@ -113,8 +113,7 @@ export function createSoundsWindow(): void {
 export function createBreakWindows(): void {
   const settings = getSettings();
   const startAsHud =
-    settings.notificationType === NotificationType.Reminder &&
-    wasStartedFromTray();
+    isDeskReminderType(settings.notificationType) && wasStartedFromTray();
 
   let buttonCount = 1;
   if (settings.postponeBreakEnabled) buttonCount++;

@@ -5,6 +5,7 @@ import {
   Settings,
   SoundType,
   TrayTextMode,
+  twentyEightTwoDefaults,
 } from "../../types/settings";
 import { toast } from "../toaster";
 import AdvancedCard from "./settings/advanced-card";
@@ -49,6 +50,17 @@ export default function SettingsEl() {
 
   const handleNotificationTypeChange = (value: string): void => {
     const notificationType = value as NotificationType;
+    if (notificationType === NotificationType.TwentyEightTwo) {
+      setSettingsDraft({
+        ...settingsDraft,
+        notificationType,
+        breakFrequencySeconds: twentyEightTwoDefaults.sitSeconds,
+        breakLengthSeconds: twentyEightTwoDefaults.standSeconds,
+        moveLengthSeconds: twentyEightTwoDefaults.moveSeconds,
+      });
+      return;
+    }
+
     setSettingsDraft({ ...settingsDraft, notificationType });
   };
 
@@ -65,6 +77,8 @@ export default function SettingsEl() {
       secondsField = "postponeLengthSeconds";
     } else if (fieldName === "idleResetLength") {
       secondsField = "idleResetLengthSeconds";
+    } else if (fieldName === "moveLength") {
+      secondsField = "moveLengthSeconds";
     } else {
       return;
     }

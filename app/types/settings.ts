@@ -2,11 +2,33 @@ export enum NotificationType {
   Notification = "NOTIFICATION",
   Popup = "POPUP",
   Reminder = "REMINDER",
+  TwentyEightTwo = "TWENTY_EIGHT_TWO",
 }
 
 export function usesBreakWindows(type: NotificationType): boolean {
-  return type === NotificationType.Popup || type === NotificationType.Reminder;
+  return (
+    type === NotificationType.Popup ||
+    type === NotificationType.Reminder ||
+    type === NotificationType.TwentyEightTwo
+  );
 }
+
+export function isDeskReminderType(type: NotificationType): boolean {
+  return (
+    type === NotificationType.Reminder ||
+    type === NotificationType.TwentyEightTwo
+  );
+}
+
+export function usesMovePhase(type: NotificationType): boolean {
+  return type === NotificationType.TwentyEightTwo;
+}
+
+export const twentyEightTwoDefaults = {
+  sitSeconds: 20 * 60,
+  standSeconds: 8 * 60,
+  moveSeconds: 2 * 60,
+} as const;
 
 export interface WorkingHoursRange {
   fromMinutes: number;
@@ -40,6 +62,7 @@ export interface Settings {
   notificationType: NotificationType;
   breakFrequencySeconds: number;
   breakLengthSeconds: number;
+  moveLengthSeconds: number;
   postponeLengthSeconds: number;
   postponeLimit: number;
   workingHoursEnabled: boolean;
@@ -80,6 +103,7 @@ export const defaultSettings: Settings = {
   notificationType: NotificationType.Popup,
   breakFrequencySeconds: 28 * 60,
   breakLengthSeconds: 2 * 60,
+  moveLengthSeconds: 2 * 60,
   postponeLengthSeconds: 3 * 60,
   postponeLimit: 0,
   workingHoursEnabled: true,

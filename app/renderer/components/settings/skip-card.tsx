@@ -1,4 +1,4 @@
-import { NotificationType, Settings } from "../../../types/settings";
+import { Settings, isDeskReminderType } from "../../../types/settings";
 import SettingsCard from "./settings-card";
 
 interface SkipCardProps {
@@ -14,7 +14,7 @@ export default function SkipCard({
     <SettingsCard
       title="Skip"
       helperText={
-        settingsDraft.notificationType === NotificationType.Reminder
+        isDeskReminderType(settingsDraft.notificationType)
           ? "Allow skipping this stand reminder and starting a new seated interval."
           : "Allow skipping breaks entirely without rescheduling them."
       }

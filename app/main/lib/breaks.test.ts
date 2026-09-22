@@ -201,6 +201,48 @@ describe("reminder sitting idle pause", () => {
   });
 });
 
+describe("20-8-2 desk reminder", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    harness.settings = {
+      ...defaultSettings,
+      notificationType: NotificationType.TwentyEightTwo,
+      breakFrequencySeconds: 20 * 60,
+      breakLengthSeconds: 8 * 60,
+      moveLengthSeconds: 2 * 60,
+      workingHoursEnabled: false,
+    };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("creates overlay windows", async () => {
+    const breaks = await import("./breaks.js");
+    breaks.startBreakNow();
+
+    expect(harness.createBreakWindows).toHaveBeenCalledOnce();
+    expect(breaks.isHavingBreak()).toBe(true);
+    expect(breaks.getOverlayPhase()).toBe("stand");
+  });
+
+  it("uses the move duration after standing", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-24T09:00:00Z"));
+    const breaks = await import("./breaks.js");
+    breaks.startBreakNow();
+
+    expect(breaks.getStandingRemainingSeconds()).toBe(8 * 60);
+
+    const moveEndTime = breaks.startMovePhase();
+    expect(breaks.getOverlayPhase()).toBe("move");
+    expect(breaks.getStandingRemainingSeconds()).toBe(2 * 60);
+    expect(moveEndTime - Date.now()).toBe(2 * 60 * 1000);
+  });
+});
+
 describe("popup idle reset", () => {
   beforeEach(() => {
     vi.useFakeTimers();

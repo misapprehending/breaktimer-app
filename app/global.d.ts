@@ -12,6 +12,7 @@ declare const ipcRenderer: {
   invokeGetAppInitialized: () => Promise<boolean>;
   invokeSetAppInitialized: () => Promise<void>;
   invokeBreakStart: () => Promise<void>;
+  invokeBreakMoveStart: () => Promise<void>;
   invokeBreakEnd: () => Promise<void>;
   invokeBreakWindowResize: () => Promise<void>;
   onPlayEndSound: (
@@ -21,6 +22,7 @@ declare const ipcRenderer: {
     cb: (type: string, volume?: number) => void,
   ) => Promise<void>;
   onBreakStart: (cb: (breakEndTime: number) => void) => void;
+  onBreakMoveStart: (cb: (breakEndTime: number) => void) => void;
   onBreakEnd: (cb: () => void) => void;
 };
 

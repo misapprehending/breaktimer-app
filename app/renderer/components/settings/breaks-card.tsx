@@ -27,6 +27,14 @@ interface BreaksCardProps {
   onSwitchChange: (field: string, checked: boolean) => void;
 }
 
+function secondsToDate(seconds: number): Date {
+  const date = new Date();
+  date.setHours(Math.floor(seconds / 3600));
+  date.setMinutes(Math.floor((seconds % 3600) / 60));
+  date.setSeconds(seconds % 60);
+  return date;
+}
+
 export default function BreaksCard({
   settingsDraft,
   onNotificationTypeChange,
@@ -34,84 +42,99 @@ export default function BreaksCard({
   onTextChange,
   onSwitchChange,
 }: BreaksCardProps) {
-  const isReminder =
+  const isSitStand =
     settingsDraft.notificationType === NotificationType.Reminder;
+  const isTwentyEightTwo =
+    settingsDraft.notificationType === NotificationType.TwentyEightTwo;
+  const isDeskReminder = isSitStand || isTwentyEightTwo;
+
+  const helperText = isTwentyEightTwo
+    ? "Sit, stand, then move. Defaults to 20 minutes sitting, 8 standing, and 2 moving."
+    : isSitStand
+      ? "Stay at the computer and switch between sitting and standing on a timer."
+      : "Sit-stand desk is a posture timer. 20-8-2 adds a short move break after standing.";
 
   return (
     <SettingsCard
       title="Breaks"
-      helperText={
-        isReminder
-          ? "A non-blocking reminder to stand, then a tiny countdown while you stay standing."
-          : undefined
-      }
+      helperText={helperText}
       toggle={{
         checked: settingsDraft.breaksEnabled,
         onCheckedChange: (checked) => onSwitchChange("breaksEnabled", checked),
       }}
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Type</Label>
-            <Select
-              value={settingsDraft.notificationType}
-              onValueChange={onNotificationTypeChange}
-              disabled={!settingsDraft.breaksEnabled}
-            >
-              <SelectTrigger style={{ width: 165 }}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NotificationType.Popup}>
-                  Popup break
-                </SelectItem>
-                <SelectItem value={NotificationType.Reminder}>
-                  Reminder overlay
-                </SelectItem>
-                <SelectItem value={NotificationType.Notification}>
-                  Simple notification
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Type</Label>
+          <Select
+            value={settingsDraft.notificationType}
+            onValueChange={onNotificationTypeChange}
+            disabled={!settingsDraft.breaksEnabled}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NotificationType.Popup}>
+                Popup break
+              </SelectItem>
+              <SelectItem value={NotificationType.Reminder}>
+                Sit-stand desk
+              </SelectItem>
+              <SelectItem value={NotificationType.TwentyEightTwo}>
+                20-8-2
+              </SelectItem>
+              <SelectItem value={NotificationType.Notification}>
+                Simple notification
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div
+          className={`grid gap-4 ${isTwentyEightTwo ? "grid-cols-3" : "grid-cols-2"}`}
+        >
           <div className="space-y-2">
             <Label className="text-sm font-medium">
-              {isReminder ? "Seated time" : "Frequency"}
+              {isDeskReminder ? "Seated time" : "Frequency"}
             </Label>
             <TimeInput
               precision="seconds"
               value={settingsDraft.breakFrequencySeconds}
-              onChange={(seconds) => {
-                const date = new Date();
-                date.setHours(Math.floor(seconds / 3600));
-                date.setMinutes(Math.floor((seconds % 3600) / 60));
-                date.setSeconds(seconds % 60);
-                onDateChange("breakFrequency", date);
-              }}
+              onChange={(seconds) =>
+                onDateChange("breakFrequency", secondsToDate(seconds))
+              }
               disabled={!settingsDraft.breaksEnabled}
             />
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-medium">
-              {isReminder ? "Standing time" : "Length"}
+              {isDeskReminder ? "Standing time" : "Length"}
             </Label>
             <TimeInput
               precision="seconds"
               value={settingsDraft.breakLengthSeconds}
-              onChange={(seconds) => {
-                const date = new Date();
-                date.setHours(Math.floor(seconds / 3600));
-                date.setMinutes(Math.floor((seconds % 3600) / 60));
-                date.setSeconds(seconds % 60);
-                onDateChange("breakLength", date);
-              }}
+              onChange={(seconds) =>
+                onDateChange("breakLength", secondsToDate(seconds))
+              }
               disabled={
                 !settingsDraft.breaksEnabled ||
                 !usesBreakWindows(settingsDraft.notificationType)
               }
             />
           </div>
+          {isTwentyEightTwo && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Moving time</Label>
+              <TimeInput
+                precision="seconds"
+                value={settingsDraft.moveLengthSeconds}
+                onChange={(seconds) =>
+                  onDateChange("moveLength", secondsToDate(seconds))
+                }
+                disabled={!settingsDraft.breaksEnabled}
+              />
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium">Title</Label>
@@ -133,7 +156,7 @@ export default function BreaksCard({
             onChange={onTextChange.bind(null, "breakMessage")}
             disabled={!settingsDraft.breaksEnabled}
             placeholder={
-              isReminder
+              isDeskReminder
                 ? "Optional note shown in the stand reminder..."
                 : "Enter your break message..."
             }

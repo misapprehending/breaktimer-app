@@ -1,7 +1,11 @@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import SettingsCard from "./settings-card";
-import { NotificationType, Settings } from "../../../types/settings";
+import {
+  NotificationType,
+  Settings,
+  isDeskReminderType,
+} from "../../../types/settings";
 
 interface AdvancedCardProps {
   settingsDraft: Settings;
@@ -35,8 +39,11 @@ export default function AdvancedCard({
             }
           />
           <Label>
-            {settingsDraft.notificationType === NotificationType.Reminder
-              ? "Allow ending standing early"
+            {isDeskReminderType(settingsDraft.notificationType)
+              ? settingsDraft.notificationType ===
+                NotificationType.TwentyEightTwo
+                ? "Allow ending standing or moving early"
+                : "Allow ending standing early"
               : "Allow ending break early"}
           </Label>
         </div>
