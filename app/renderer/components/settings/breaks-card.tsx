@@ -43,7 +43,7 @@ export default function BreaksCard({
       helperText={
         isReminder
           ? "A non-blocking reminder to stand, then a tiny countdown while you stay standing."
-          : undefined
+          : "Choose Sit to stand for a desk reminder instead of a forced break."
       }
       toggle={{
         checked: settingsDraft.breaksEnabled,
@@ -59,7 +59,7 @@ export default function BreaksCard({
               onValueChange={onNotificationTypeChange}
               disabled={!settingsDraft.breaksEnabled}
             >
-              <SelectTrigger style={{ width: 165 }}>
+              <SelectTrigger style={{ width: 175 }}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -67,7 +67,7 @@ export default function BreaksCard({
                   Popup break
                 </SelectItem>
                 <SelectItem value={NotificationType.Reminder}>
-                  Reminder overlay
+                  Sit to stand
                 </SelectItem>
                 <SelectItem value={NotificationType.Notification}>
                   Simple notification
