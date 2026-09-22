@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, IpcMainInvokeEvent, screen } from "electron";
 import log from "electron-log";
 import { IpcChannel } from "../../types/ipc";
-import { Settings, SoundType } from "../../types/settings";
+import { NotificationType, Settings, SoundType } from "../../types/settings";
 import {
   completeBreakTracking,
   getAllowPostpone,
@@ -18,7 +18,7 @@ import {
   setAppInitialized,
 } from "./store";
 import { buildTray } from "./tray";
-import { getWindows } from "./windows";
+import { getStandingHudBounds, getWindows } from "./windows";
 
 export function sendIpc(channel: IpcChannel, ...args: unknown[]): void {
   const windows: BrowserWindow[] = getWindows();
@@ -102,6 +102,12 @@ ipcMain.handle(
     if (window) {
       const display = screen.getDisplayNearestPoint(window.getBounds());
       const settings = getSettings();
+
+      if (settings.notificationType === NotificationType.Reminder) {
+        const hudBounds = getStandingHudBounds(display);
+        window.setBounds(hudBounds);
+        return;
+      }
 
       if (settings.showBackdrop) {
         // Fullscreen for backdrop mode

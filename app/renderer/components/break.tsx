@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
-import { Settings, SoundType } from "../../types/settings";
+import { NotificationType, Settings, SoundType } from "../../types/settings";
 import { BreakNotification } from "./break/break-notification";
 import { BreakProgress } from "./break/break-progress";
 import { isPrimaryBreakWindow } from "./break/break-window";
@@ -33,8 +33,13 @@ export default function Break() {
       setSettings(settings);
       setTimeSinceLastBreak(timeSince);
 
-      // Skip the countdown if immediately start breaks is enabled or started from tray
-      if (settings.immediatelyStartBreaks || startedFromTray) {
+      // Skip the countdown if immediately start breaks is enabled or started from tray.
+      // Reminder overlay always waits for an explicit stand confirmation.
+      if (
+        startedFromTray ||
+        (settings.immediatelyStartBreaks &&
+          settings.notificationType !== NotificationType.Reminder)
+      ) {
         setCountingDown(false);
       }
 
@@ -74,15 +79,9 @@ export default function Break() {
 
   useEffect(() => {
     if (!countingDown) {
-      // Resize window to full screen for break phase
-      const renderer = ipcRenderer as typeof ipcRenderer & {
-        invokeBreakWindowResize?: () => Promise<void>;
-      };
-      if (renderer.invokeBreakWindowResize) {
-        renderer.invokeBreakWindowResize();
-      }
+      ipcRenderer.invokeBreakWindowResize();
     }
-  }, [countingDown, settings]);
+  }, [countingDown]);
 
   useEffect(() => {
     if (closing) {
@@ -121,6 +120,7 @@ export default function Break() {
   }
 
   if (countingDown) {
+    const isReminder = settings.notificationType === NotificationType.Reminder;
     return (
       <div
         className="h-full flex items-center justify-center"
@@ -135,16 +135,53 @@ export default function Break() {
             postponeBreakEnabled={
               settings.postponeBreakEnabled &&
               allowPostpone &&
-              !settings.immediatelyStartBreaks
+              (isReminder || !settings.immediatelyStartBreaks)
             }
             skipBreakEnabled={
-              settings.skipBreakEnabled && !settings.immediatelyStartBreaks
+              settings.skipBreakEnabled &&
+              (isReminder || !settings.immediatelyStartBreaks)
             }
             timeSinceLastBreak={timeSinceLastBreak}
             textColor={settings.textColor}
             backgroundColor={settings.backgroundColor}
+            waitForConfirm={isReminder}
+            title={isReminder ? settings.breakTitle : undefined}
+            confirmLabel={isReminder ? "Stand" : "Start"}
+            timeSinceNoun={isReminder ? "stand" : "break"}
           />
         )}
+      </div>
+    );
+  }
+
+  if (settings.notificationType === NotificationType.Reminder) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <motion.div
+          className="h-full w-full rounded-xl overflow-hidden"
+          animate={{ opacity: closing ? 0 : 1 }}
+          initial={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            color: settings.textColor,
+            backgroundColor: settings.backgroundColor,
+          }}
+        >
+          {ready && (
+            <BreakProgress
+              breakMessage={settings.breakMessage}
+              breakTitle={settings.breakTitle}
+              endBreakEnabled={settings.endBreakEnabled}
+              onEndBreak={handleEndBreak}
+              settings={settings}
+              textColor={settings.textColor}
+              isClosing={closing}
+              sharedBreakEndTime={sharedBreakEndTime}
+              variant="hud"
+              playStartSound={false}
+            />
+          )}
+        </motion.div>
       </div>
     );
   }

@@ -8,6 +8,7 @@ import {
   NotificationType,
   Settings,
   SoundType,
+  usesBreakWindows,
 } from "../../types/settings";
 import { sendIpc } from "./ipc";
 import { showNotification } from "./notifications";
@@ -37,6 +38,7 @@ let startedFromTray = false;
 
 let lastCompletedBreakTime: Date | null = new Date();
 let currentBreakStartTime: Date | null = null;
+let pausedRemainingSeconds: number | null = null;
 
 export function getBreakTime(): BreakTime {
   return breakTime;
@@ -57,6 +59,32 @@ export function getTimeSinceLastCompletedBreak(): number | null {
   const now = moment();
   const lastBreak = moment(lastCompletedBreakTime);
   return now.diff(lastBreak, "seconds");
+}
+
+export function getPausedRemainingSeconds(): number | null {
+  return pausedRemainingSeconds;
+}
+
+export function isSittingTimerPaused(): boolean {
+  return pausedRemainingSeconds !== null;
+}
+
+export function getStandingRemainingSeconds(): number | null {
+  if (!havingBreak || !currentBreakStartTime) {
+    return null;
+  }
+
+  const requiredDurationMs = getSettings().breakLengthSeconds * 1000;
+  const elapsedMs = Date.now() - currentBreakStartTime.getTime();
+  return Math.max(0, Math.round((requiredDurationMs - elapsedMs) / 1000));
+}
+
+function isReminderMode(settings: Settings = getSettings()): boolean {
+  return settings.notificationType === NotificationType.Reminder;
+}
+
+function clearSittingPause(): void {
+  pausedRemainingSeconds = null;
 }
 
 export function startBreakTracking(): void {
@@ -81,7 +109,7 @@ export function completeBreakTracking(breakDurationMs: number): void {
   const requiredDurationMs = settings.breakLengthSeconds * 1000;
   const halfRequiredDuration = requiredDurationMs / 2;
 
-  if (breakDurationMs >= halfRequiredDuration) {
+  if (isReminderMode(settings) || breakDurationMs >= halfRequiredDuration) {
     markBreakCompleted(
       `Break completed [duration=${Math.round(
         breakDurationMs / 1000,
@@ -150,6 +178,7 @@ function createIdleNotification() {
 
 export function scheduleNextBreak(isPostpone = false): void {
   const settings: Settings = getSettings();
+  clearSittingPause();
 
   if (idleStart) {
     createIdleNotification();
@@ -216,14 +245,15 @@ export function postponeBreak(action = "snoozed"): void {
 
 function doBreak(): void {
   havingBreak = true;
+  clearSittingPause();
 
   const settings: Settings = getSettings();
   log.info(`Break started [type=${settings.notificationType}]`);
 
   if (
     settings.notificationType === NotificationType.Notification ||
-    settings.immediatelyStartBreaks ||
-    startedFromTray
+    startedFromTray ||
+    (settings.immediatelyStartBreaks && !isReminderMode(settings))
   ) {
     startBreakTracking();
   }
@@ -242,7 +272,14 @@ function doBreak(): void {
     scheduleNextBreak();
   }
 
-  if (settings.notificationType === NotificationType.Popup) {
+  if (usesBreakWindows(settings.notificationType)) {
+    if (isReminderMode(settings) && settings.soundType !== SoundType.None) {
+      sendIpc(
+        IpcChannel.SoundStartPlay,
+        settings.soundType,
+        settings.breakSoundVolume,
+      );
+    }
     createBreakWindows();
   }
 
@@ -321,6 +358,72 @@ export function checkIdle(): boolean {
   return state === IdleState.Idle;
 }
 
+function isSystemIdle(): boolean {
+  const state: IdleState = powerMonitor.getSystemIdleState(
+    getIdleResetSeconds(),
+  ) as IdleState;
+
+  if (state === IdleState.Locked) {
+    if (!lockStart) {
+      lockStart = new Date();
+      return false;
+    }
+
+    const lockSeconds = Number(((+new Date() - +lockStart) / 1000).toFixed(0));
+    return lockSeconds > getIdleResetSeconds();
+  }
+
+  lockStart = null;
+  return state === IdleState.Idle;
+}
+
+function pauseSittingTimer(reason: string): void {
+  if (pausedRemainingSeconds !== null) {
+    breakTime = null;
+    return;
+  }
+
+  if (!breakTime) {
+    return;
+  }
+
+  const idleResetSeconds = getIdleResetSeconds();
+  const secondsSinceLastTick = lastTick
+    ? Math.abs(Date.now() - lastTick.getTime()) / 1000
+    : 0;
+  const reference =
+    lastTick && secondsSinceLastTick > idleResetSeconds
+      ? moment(lastTick)
+      : moment();
+
+  pausedRemainingSeconds = Math.max(0, breakTime.diff(reference, "seconds"));
+  breakTime = null;
+  log.info(
+    `Sitting timer paused [${reason}] [remaining=${pausedRemainingSeconds}s]`,
+  );
+  buildTray();
+}
+
+function resumeSittingTimer(): void {
+  if (pausedRemainingSeconds === null) {
+    return;
+  }
+
+  const remaining = pausedRemainingSeconds;
+  pausedRemainingSeconds = null;
+
+  if (remaining <= 0) {
+    breakTime = moment();
+    log.info("Sitting timer resumed [remaining=0s]");
+    doBreak();
+    return;
+  }
+
+  breakTime = moment().add(remaining, "seconds");
+  log.info(`Sitting timer resumed [remaining=${remaining}s]`);
+  buildTray();
+}
+
 export function isHavingBreak(): boolean {
   return havingBreak;
 }
@@ -342,6 +445,7 @@ function checkBreak(): void {
 }
 
 export function startBreakNow(): void {
+  clearSittingPause();
   startedFromTray = true;
   breakTime = moment();
   doBreak();
@@ -365,6 +469,7 @@ function tick(): void {
     }
 
     const shouldHaveBreak = checkShouldHaveBreak();
+    const reminderSitting = isReminderMode(settings) && !havingBreak;
 
     // This can happen if the computer is put to sleep. In this case, we want
     // to skip the break if the time the computer was unresponsive was greater
@@ -375,32 +480,61 @@ function tick(): void {
     const breakSeconds = getBreakSeconds();
     const lockSeconds = lockStart && Math.abs(+new Date() - +lockStart) / 1000;
 
-    if (secondsSinceLastTick > breakSeconds) {
-      // The computer has been slept for longer than the break period. In this
-      // case, it's not particularly helpful to show an idle reset
-      // notification, so just reset the break
-      lockStart = null;
-      breakTime = null;
-      resetTimeSinceLastBreak("Break auto-detected via system suspension");
-    } else if (
-      lockStart &&
-      lockSeconds !== null &&
-      lockSeconds > breakSeconds
-    ) {
-      // The computer has been locked for longer than the break period. In this
-      // case, it's not particularly helpful to show an idle reset
-      // notification, so unset idle start
-      idleStart = null;
-      lockStart = null;
-    } else if (secondsSinceLastTick > getIdleResetSeconds()) {
-      //  If idleStart exists, it means we were idle before the computer slept.
-      //  If it doesn't exist, count the computer going unresponsive as the
-      //  start of the idle period.
-      if (!idleStart) {
+    if (!reminderSitting) {
+      if (secondsSinceLastTick > breakSeconds) {
+        // The computer has been slept for longer than the break period. In this
+        // case, it's not particularly helpful to show an idle reset
+        // notification, so just reset the break
         lockStart = null;
-        idleStart = lastTick;
+        breakTime = null;
+        resetTimeSinceLastBreak("Break auto-detected via system suspension");
+      } else if (
+        lockStart &&
+        lockSeconds !== null &&
+        lockSeconds > breakSeconds
+      ) {
+        // The computer has been locked for longer than the break period. In this
+        // case, it's not particularly helpful to show an idle reset
+        // notification, so unset idle start
+        idleStart = null;
+        lockStart = null;
+      } else if (secondsSinceLastTick > getIdleResetSeconds()) {
+        //  If idleStart exists, it means we were idle before the computer slept.
+        //  If it doesn't exist, count the computer going unresponsive as the
+        //  start of the idle period.
+        if (!idleStart) {
+          lockStart = null;
+          idleStart = lastTick;
+        }
+        scheduleNextBreak();
       }
-      scheduleNextBreak();
+    }
+
+    if (reminderSitting && settings.breaksEnabled) {
+      if (!inWorkingHours) {
+        clearSittingPause();
+        if (breakTime) {
+          breakTime = null;
+          buildTray();
+        }
+        return;
+      }
+
+      const idle = isSystemIdle();
+      const slept = secondsSinceLastTick > getIdleResetSeconds();
+
+      if (idle || slept) {
+        pauseSittingTimer(idle ? "idle" : "system suspension");
+      }
+
+      if (idle) {
+        return;
+      }
+
+      if (pausedRemainingSeconds !== null) {
+        resumeSittingTimer();
+        return;
+      }
     }
 
     if (!shouldHaveBreak && !havingBreak && breakTime) {
@@ -431,6 +565,7 @@ let tickInterval: NodeJS.Timeout;
 
 export function initBreaks(systemIdleMonitor?: SystemIdleMonitor): void {
   powerMonitor = systemIdleMonitor ?? require("electron").powerMonitor;
+  clearSittingPause();
 
   const settings: Settings = getSettings();
 

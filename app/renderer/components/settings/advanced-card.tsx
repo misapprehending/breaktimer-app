@@ -15,16 +15,17 @@ export default function AdvancedCard({
   return (
     <SettingsCard title="Advanced">
       <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={settingsDraft.immediatelyStartBreaks}
-            onCheckedChange={(checked) =>
-              onSwitchChange("immediatelyStartBreaks", checked)
-            }
-            disabled={settingsDraft.notificationType !== NotificationType.Popup}
-          />
-          <Label>Immediately start breaks</Label>
-        </div>
+        {settingsDraft.notificationType === NotificationType.Popup && (
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={settingsDraft.immediatelyStartBreaks}
+              onCheckedChange={(checked) =>
+                onSwitchChange("immediatelyStartBreaks", checked)
+              }
+            />
+            <Label>Immediately start breaks</Label>
+          </div>
+        )}
 
         <div className="flex items-center space-x-2">
           <Switch
@@ -33,7 +34,11 @@ export default function AdvancedCard({
               onSwitchChange("endBreakEnabled", checked)
             }
           />
-          <Label>Allow ending break early</Label>
+          <Label>
+            {settingsDraft.notificationType === NotificationType.Reminder
+              ? "Allow ending standing early"
+              : "Allow ending break early"}
+          </Label>
         </div>
       </div>
     </SettingsCard>

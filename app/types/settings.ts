@@ -1,6 +1,11 @@
 export enum NotificationType {
   Notification = "NOTIFICATION",
   Popup = "POPUP",
+  Reminder = "REMINDER",
+}
+
+export function usesBreakWindows(type: NotificationType): boolean {
+  return type === NotificationType.Popup || type === NotificationType.Reminder;
 }
 
 export interface WorkingHoursRange {

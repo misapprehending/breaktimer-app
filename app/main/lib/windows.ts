@@ -1,8 +1,21 @@
-import { app, BrowserWindow, screen } from "electron";
+import { app, BrowserWindow, Display, Rectangle, screen } from "electron";
 import log from "electron-log";
 import path from "path";
-import { endPopupBreak } from "./breaks";
+import { NotificationType } from "../../types/settings";
+import { endPopupBreak, wasStartedFromTray } from "./breaks";
 import { getSettings } from "./store";
+
+export const STANDING_HUD_WIDTH = 268;
+export const STANDING_HUD_HEIGHT = 64;
+
+export function getStandingHudBounds(display: Display): Rectangle {
+  return {
+    x: display.workArea.x + display.workArea.width - STANDING_HUD_WIDTH - 16,
+    y: display.workArea.y + 16,
+    width: STANDING_HUD_WIDTH,
+    height: STANDING_HUD_HEIGHT,
+  };
+}
 
 let settingsWindow: BrowserWindow | null = null;
 let soundsWindow: BrowserWindow | null = null;
@@ -99,6 +112,9 @@ export function createSoundsWindow(): void {
 
 export function createBreakWindows(): void {
   const settings = getSettings();
+  const startAsHud =
+    settings.notificationType === NotificationType.Reminder &&
+    wasStartedFromTray();
 
   let buttonCount = 1;
   if (settings.postponeBreakEnabled) buttonCount++;
@@ -106,19 +122,22 @@ export function createBreakWindows(): void {
 
   const notificationWidth =
     450 + (buttonCount - 1) * 50 + (buttonCount === 3 ? 20 : 0);
+  const notificationHeight = 80;
 
   const displays = screen.getAllDisplays();
   for (let windowIndex = 0; windowIndex < displays.length; windowIndex++) {
     const display = displays[windowIndex];
-    const notificationHeight = 80;
+    const hudBounds = getStandingHudBounds(display);
     const breakWindow = new BrowserWindow({
       show: false,
       autoHideMenuBar: true,
       frame: false,
-      x: display.bounds.x + display.bounds.width / 2 - notificationWidth / 2,
-      y: display.bounds.y + 50,
-      width: notificationWidth,
-      height: notificationHeight,
+      x: startAsHud
+        ? hudBounds.x
+        : display.bounds.x + display.bounds.width / 2 - notificationWidth / 2,
+      y: startAsHud ? hudBounds.y : display.bounds.y + 50,
+      width: startAsHud ? hudBounds.width : notificationWidth,
+      height: startAsHud ? hudBounds.height : notificationHeight,
       resizable: false,
       focusable: false,
       transparent: true,
