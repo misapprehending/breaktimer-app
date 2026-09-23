@@ -100,7 +100,7 @@ The Windows NSIS installer can be built from Linux or Windows. For Intune, prefe
 GH_TOKEN=<github token> npm run publish-win
 ```
 
-That publishes `LAQBreakTimer-Setup-<version>.exe` and `latest.yml` so installed apps can auto-update. Tagging `v*` also runs `.github/workflows/release.yml`.
+That publishes `LAQBreakTimer-Setup-<version>.exe` as a GitHub Release for IT to download and deploy with Intune. The app does not auto-update from GitHub. Tagging `v*` also runs `.github/workflows/release.yml`.
 
 To also wrap the installer as an MSI (WiX required):
 

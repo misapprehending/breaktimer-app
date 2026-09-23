@@ -11,6 +11,7 @@ declare const ipcRenderer: {
   invokeWasStartedFromTray: () => Promise<boolean>;
   invokeGetAppInitialized: () => Promise<boolean>;
   invokeSetAppInitialized: () => Promise<void>;
+  invokeGetAppVersion: () => Promise<string>;
   invokeBreakStart: () => Promise<void>;
   invokeBreakMoveStart: () => Promise<void>;
   invokeBreakEnd: () => Promise<void>;

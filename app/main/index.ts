@@ -1,8 +1,7 @@
 import { app } from "electron";
 import electronDebug from "electron-debug";
 import log from "electron-log";
-import { autoUpdater } from "electron-updater";
-import { APP_ID, GITHUB_RELEASES_URL } from "../types/branding";
+import { APP_ID } from "../types/branding";
 import { setAutoLauch } from "./lib/auto-launch";
 import { initBreaks } from "./lib/breaks";
 import "./lib/ipc";
@@ -27,34 +26,6 @@ app.on("activate", () => {
 if (!gotTheLock) {
   log.info("App already running");
   app.exit();
-}
-
-function configureAutoUpdater(): void {
-  autoUpdater.logger = log;
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
-
-  autoUpdater.on("error", (error) => {
-    log.error(`Auto updater error: ${error}`);
-  });
-
-  autoUpdater.on("update-available", (info) => {
-    log.info("Update available:", info);
-  });
-
-  autoUpdater.on("update-downloaded", (info) => {
-    log.info("Update downloaded:", info);
-  });
-}
-
-function checkForUpdates(): void {
-  log.info("Checking for updates...");
-  configureAutoUpdater();
-
-  autoUpdater.checkForUpdatesAndNotify().catch((error) => {
-    log.error(`Unable to run auto updater: ${error}`);
-    log.error(`Releases: ${GITHUB_RELEASES_URL}`);
-  });
 }
 
 if (process.env.NODE_ENV === "production") {
@@ -108,8 +79,4 @@ app.on("ready", async () => {
   initBreaks();
   initTray();
   createSoundsWindow();
-
-  if (process.env.NODE_ENV !== "development") {
-    checkForUpdates();
-  }
 });

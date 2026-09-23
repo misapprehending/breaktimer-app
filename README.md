@@ -1,6 +1,8 @@
 # LAQ BreakTimer
 
-Legal Aid Queensland fork of [BreakTimer](https://github.com/tom-james-watson/breaktimer-app). It keeps the same break-reminder behaviour, with LAQ colours, GitHub auto-update, and an Intune-ready Windows installer.
+Legal Aid Queensland fork of [BreakTimer](https://github.com/tom-james-watson/breaktimer-app). It keeps the same break-reminder behaviour, with LAQ colours and an Intune-ready Windows installer.
+
+Updates are **manual**: build a new installer, then deploy it with Intune. The app does not check GitHub or auto-update itself.
 
 Upstream BreakTimer is GPL-3.0-or-later software by Tom Watson. This fork preserves that license.
 
@@ -17,64 +19,49 @@ Defaults are taken from [legalaid.qld.gov.au](https://www.legalaid.qld.gov.au):
 
 Existing installs that still have the upstream default `#16a085` are migrated to `#0F8291` on first launch.
 
-## Auto-update
+## Versioning and builds
 
-Windows, macOS, and Linux check [GitHub Releases](https://github.com/misapprehending/breaktimer-app/releases) on startup via `electron-updater`.
+The version shown in Settings, the tray menu, and About is `version` from `package.json`. Electron stamps that into the Windows file version, which Intune can detect.
 
-1. Bump `version` in `package.json`.
-2. Tag and push, for example `git tag v2.1.1 && git push origin v2.1.1`.
-3. The **Release** workflow publishes `LAQBreakTimer-Setup-<version>.exe` and `latest.yml`.
-4. Installed apps download that release and apply it on quit.
+1. Bump `version` in `package.json` (for example `2.1.0` → `2.1.1`).
+2. Build the installer:
 
-The GitHub repo must be **public** (or you must ship a token) for update checks to succeed. Windows builds are unsigned, so `publisherName` is omitted and electron-updater skips Authenticode checks. After you add a code-signing certificate, set `build.win.publisherName` to the certificate CN so updates verify the publisher.
+   ```bash
+   npm run package-win
+   ```
 
-## Intune
+   Output: `release/LAQBreakTimer-Setup-<version>.exe`
 
-The Windows target is NSIS, configured for silent enterprise install. GitHub auto-update still works because the payload is NSIS, not a native MSI.
+3. Tagging `v*` also runs `.github/workflows/release.yml`, which publishes that installer as a GitHub Release for IT to download. The app does not consume the release.
 
-### Build the installer
-
-```bash
-npm run package-win
-```
-
-Output: `release/LAQBreakTimer-Setup-<version>.exe`
-
-On a Windows builder with WiX, you can also wrap that NSIS installer as an MSI:
+On a Windows builder with WiX, you can also wrap the NSIS installer as an MSI:
 
 ```bash
 npm run package-win-intune
 ```
 
-### Win32 app (recommended)
+## Intune (manual updates)
 
-Wrap the NSIS setup with the [Microsoft Win32 Content Prep Tool](https://learn.microsoft.com/en-us/intune/intune-service/apps/apps-win32-app-management).
+The Windows target is a per-machine NSIS installer. It does not launch the app at the end of setup.
 
-**Per-machine (System context)** — typical shared PCs:
+Wrap `LAQBreakTimer-Setup-<version>.exe` with the [Microsoft Win32 Content Prep Tool](https://learn.microsoft.com/en-us/intune/intune-service/apps/apps-win32-app-management).
 
-| Field     | Value                                                               |
-| --------- | ------------------------------------------------------------------- |
-| Install   | `LAQBreakTimer-Setup-2.1.0.exe /S /allusers`                        |
-| Uninstall | `"C:\Program Files\LAQ BreakTimer\Uninstall LAQ BreakTimer.exe" /S` |
-| Detection | File exists: `C:\Program Files\LAQ BreakTimer\LAQBreakTimer.exe`    |
-| Context   | System                                                              |
+| Field     | Value                                                                                                 |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| Install   | `LAQBreakTimer-Setup-2.1.0.exe /S`                                                                    |
+| Uninstall | `"C:\Program Files\LAQ BreakTimer\Uninstall LAQ BreakTimer.exe" /S`                                   |
+| Detection | File `C:\Program Files\LAQ BreakTimer\LAQBreakTimer.exe` version **greater than or equal to** `2.1.0` |
+| Context   | System                                                                                                |
 
-**Per-user (User context)** — silent GitHub updates without UAC:
+To ship a new version:
 
-| Field     | Value                                                                      |
-| --------- | -------------------------------------------------------------------------- |
-| Install   | `LAQBreakTimer-Setup-2.1.0.exe /S /currentuser`                            |
-| Uninstall | `"%LOCALAPPDATA%\Programs\LAQ BreakTimer\Uninstall LAQ BreakTimer.exe" /S` |
-| Detection | File exists: `%LOCALAPPDATA%\Programs\LAQ BreakTimer\LAQBreakTimer.exe`    |
-| Context   | User                                                                       |
-
-Use **file exists**, not an exact file version. In-app GitHub updates change the version and would otherwise make Intune think the app is missing.
-
-Per-machine updates from GitHub need elevation. If users cannot approve UAC, deploy per-user or push new versions with Intune instead of in-app update.
+1. Build `LAQBreakTimer-Setup-<new-version>.exe`.
+2. Create a new Win32 app (or replace the package) with install command and detection version set to the new version.
+3. **Supersede** the previous Win32 app so Intune replaces it. Do not rely on the app to update itself.
 
 ### MSI-wrapped LOB
 
-`package-win-intune` produces `LAQBreakTimer-<version>.msi` that silently runs the NSIS installer with `/S /allusers`. Deploy as a Line-of-business MSI or as a Win32 app:
+`package-win-intune` produces `LAQBreakTimer-<version>.msi`:
 
 ```text
 msiexec /i LAQBreakTimer-2.1.0.msi /qn /norestart

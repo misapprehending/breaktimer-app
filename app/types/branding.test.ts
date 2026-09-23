@@ -7,6 +7,7 @@ import {
   BRAND_TEXT_COLOR,
   LEGACY_BREAKTIMER_BACKGROUND_COLOR,
 } from "./branding";
+import { IpcChannel } from "./ipc";
 import { defaultSettings } from "./settings";
 
 describe("LAQ branding", () => {
@@ -37,5 +38,9 @@ describe("LAQ branding", () => {
     };
 
     expect(applyBrandColorMigration(custom)).toEqual(custom);
+  });
+
+  it("exposes the installed app version over IPC", () => {
+    expect(IpcChannel.AppVersionGet).toBe("APP_VERSION_GET");
   });
 });

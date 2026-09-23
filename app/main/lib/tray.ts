@@ -2,7 +2,6 @@ import { app, dialog, Menu, Tray } from "electron";
 import log from "electron-log";
 import moment from "moment";
 import path from "path";
-import packageJson from "../../../package.json";
 import {
   APP_NAME,
   GITHUB_URL,
@@ -143,6 +142,7 @@ export function buildTray(): void {
     }
 
     tray = new Tray(imgPath);
+    tray.setToolTip(`${APP_NAME} ${app.getVersion()}`);
 
     // On windows, context menu will not show on left click by default
     if (process.platform === "win32") {
@@ -195,12 +195,14 @@ export function buildTray(): void {
     buildTray();
   };
 
+  const appVersion = app.getVersion();
+
   const createAboutWindow = (): void => {
     dialog.showMessageBox({
       title: "About",
       type: "info",
       message: APP_NAME,
-      detail: `Build: ${packageJson.version}\n\nLegal Aid Queensland:\n${WEBSITE_URL}\n\nSource Code:\n${GITHUB_URL}\n\nUpstream BreakTimer:\n${UPSTREAM_URL}\n\nDistributed under GPL-3.0-or-later license.`,
+      detail: `Version: ${appVersion}\n\nUpdates are deployed manually with Intune.\n\nLegal Aid Queensland:\n${WEBSITE_URL}\n\nSource Code:\n${GITHUB_URL}\n\nUpstream BreakTimer:\n${UPSTREAM_URL}\n\nDistributed under GPL-3.0-or-later license.`,
     });
   };
 
@@ -243,6 +245,11 @@ export function buildTray(): void {
   const disableEndTime = getDisableEndTime();
 
   const contextMenu = Menu.buildFromTemplate([
+    {
+      label: `${APP_NAME} ${appVersion}`,
+      enabled: false,
+    },
+    { type: "separator" },
     {
       label: nextBreak,
       visible: Boolean(nextBreak) && inWorkingHours && settings.breaksEnabled,

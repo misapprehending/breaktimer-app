@@ -4,16 +4,20 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface Props {
   handleSave: () => void;
   showSave: boolean;
+  version: string | null;
 }
 
 export default function SettingsHeader(props: Props) {
-  const { handleSave, showSave } = props;
+  const { handleSave, showSave, version } = props;
 
   return (
     <div className="border-b border-border bg-background">
       <nav className="flex items-center justify-between p-4 h-16 min-h-16">
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+          {version && (
+            <span className="text-sm text-muted-foreground">v{version}</span>
+          )}
         </div>
         {showSave && (
           <div className="flex items-center">

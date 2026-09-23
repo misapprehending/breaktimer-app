@@ -1,4 +1,10 @@
-import { BrowserWindow, ipcMain, IpcMainInvokeEvent, screen } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  IpcMainInvokeEvent,
+  screen,
+} from "electron";
 import log from "electron-log";
 import { IpcChannel } from "../../types/ipc";
 import { Settings, SoundType, isDeskReminderType } from "../../types/settings";
@@ -162,4 +168,9 @@ ipcMain.handle(IpcChannel.AppInitializedGet, (): boolean => {
 ipcMain.handle(IpcChannel.AppInitializedSet, (): void => {
   log.info(IpcChannel.AppInitializedSet);
   setAppInitialized();
+});
+
+ipcMain.handle(IpcChannel.AppVersionGet, (): string => {
+  log.info(IpcChannel.AppVersionGet);
+  return app.getVersion();
 });

@@ -118,11 +118,8 @@
       "executableName": "LAQBreakTimer"
     },
     "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "selectPerMachineByDefault": true,
-      "allowElevation": true,
-      "allowToChangeInstallationDirectory": false,
+      "oneClick": true,
+      "perMachine": true,
       "runAfterFinish": false,
       "deleteAppDataOnUninstall": false,
       "shortcutName": "LAQ BreakTimer",
@@ -196,7 +193,6 @@
     "electron-debug": "^4.1.0",
     "electron-devtools-installer": "^4.0.0",
     "electron-log": "^5.4.4",
-    "electron-updater": "^6.8.9",
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
