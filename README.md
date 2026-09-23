@@ -32,7 +32,7 @@ The version shown in Settings, the tray menu, and About is `version` from `packa
 
    Output: `release/LAQBreakTimer-Setup-<version>.exe`
 
-3. Tagging `v*` also runs `.github/workflows/release.yml`, which publishes that installer as a GitHub Release for IT to download. The app does not consume the release.
+3. Tagging `v*` runs `.github/workflows/release.yml` and attaches **only** `LAQBreakTimer-Setup-<version>.exe` to that GitHub Release. The app does not consume the release. If a tag already exists, run the **Release** workflow with `workflow_dispatch` and that tag.
 
 On a Windows builder with WiX, you can also wrap the NSIS installer as an MSI:
 

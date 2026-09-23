@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing git tag to attach the Windows installer to
+        required: true
+        default: v2.1.0
 
 permissions:
   contents: write
@@ -14,6 +20,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,7 +35,13 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Publish Windows installer for Intune
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run publish-win
+      - name: Build Windows installer
+        run: npm run package-win
+
+      - name: Attach installer to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          files: release/LAQBreakTimer-Setup-*.exe
+          fail_on_unmatched_files: true
+          generate_release_notes: true
