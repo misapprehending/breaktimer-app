@@ -19,8 +19,8 @@
     "package-ci": "npm run postinstall && npm run build && electron-builder --publish always",
     "package-linux": "npm run build && electron-builder build --linux",
     "package-mac": "npm run build && electron-builder build --mac",
-    "package-win": "npm run build && electron-builder build --win --x64",
-    "package-win-intune": "npm run build && electron-builder build --x64 --win nsis --win msi-wrapped",
+    "package-win": "npm run build && electron-builder build --win --x64 --publish never",
+    "package-win-intune": "npm run build && electron-builder build --x64 --win nsis --win msi-wrapped --publish never",
     "publish-linux": "npm run postinstall && npm run build && electron-builder build --linux --publish always",
     "publish-mac": "npm run postinstall && npm run build && electron-builder build --mac --publish always",
     "publish-win": "npm run postinstall && npm run build && electron-builder build --win nsis --x64 --publish always",
@@ -122,6 +122,7 @@
       "perMachine": true,
       "runAfterFinish": false,
       "deleteAppDataOnUninstall": false,
+      "differentialPackage": false,
       "shortcutName": "LAQ BreakTimer",
       "uninstallDisplayName": "LAQ BreakTimer",
       "artifactName": "LAQBreakTimer-Setup-${version}.${ext}"
