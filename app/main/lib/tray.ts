@@ -3,6 +3,12 @@ import log from "electron-log";
 import moment from "moment";
 import path from "path";
 import packageJson from "../../../package.json";
+import {
+  APP_NAME,
+  GITHUB_URL,
+  UPSTREAM_URL,
+  WEBSITE_URL,
+} from "../../types/branding";
 import { TrayTextMode, isDeskReminderType } from "../../types/settings";
 import {
   checkIdle,
@@ -193,8 +199,8 @@ export function buildTray(): void {
     dialog.showMessageBox({
       title: "About",
       type: "info",
-      message: `BreakTimer`,
-      detail: `Build: ${packageJson.version}\n\nWebsite:\nhttps://breaktimer.app\n\nSource Code:\nhttps://github.com/tom-james-watson/breaktimer-app\n\nDistributed under GPL-3.0-or-later license.`,
+      message: APP_NAME,
+      detail: `Build: ${packageJson.version}\n\nLegal Aid Queensland:\n${WEBSITE_URL}\n\nSource Code:\n${GITHUB_URL}\n\nUpstream BreakTimer:\n${UPSTREAM_URL}\n\nDistributed under GPL-3.0-or-later license.`,
     });
   };
 

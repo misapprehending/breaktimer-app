@@ -1,3 +1,5 @@
+import { BRAND_BACKGROUND_COLOR, BRAND_TEXT_COLOR } from "./branding";
+
 export enum NotificationType {
   Notification = "NOTIFICATION",
   Popup = "POPUP",
@@ -142,8 +144,8 @@ export const defaultSettings: Settings = {
   breakSoundVolume: 1,
   breakTitle: "Time for a break.",
   breakMessage: "Rest your eyes.\nStretch your legs.\nBreathe. Relax.",
-  backgroundColor: "#16a085",
-  textColor: "#ffffff",
+  backgroundColor: BRAND_BACKGROUND_COLOR,
+  textColor: BRAND_TEXT_COLOR,
   showBackdrop: true,
   backdropOpacity: 0.7,
   endBreakEnabled: true,

@@ -1,11 +1,11 @@
-import { app, shell } from "electron";
+import { app } from "electron";
 import electronDebug from "electron-debug";
 import log from "electron-log";
 import { autoUpdater } from "electron-updater";
+import { APP_ID, GITHUB_RELEASES_URL } from "../types/branding";
 import { setAutoLauch } from "./lib/auto-launch";
 import { initBreaks } from "./lib/breaks";
 import "./lib/ipc";
-import { showNotification } from "./lib/notifications";
 import { getAppInitialized } from "./lib/store";
 import { initTray } from "./lib/tray";
 import { createSettingsWindow, createSoundsWindow } from "./lib/windows";
@@ -29,60 +29,32 @@ if (!gotTheLock) {
   app.exit();
 }
 
-function getDownloadUrl(): string {
-  switch (process.platform) {
-    case "win32":
-      return "https://github.com/tom-james-watson/breaktimer-app/releases/latest/download/BreakTimer.exe";
-    case "linux":
-      return "https://github.com/tom-james-watson/breaktimer-app/releases/latest";
-    default:
-      throw new Error("Download URL should not be called for macOS");
-  }
-}
-
-function shouldAutoInstall(): boolean {
-  const isMac = process.platform === "darwin";
-  const isLinux = process.platform === "linux";
-
-  return isMac || isLinux;
-}
-
-function checkForUpdates(): void {
-  log.info("Checking for updates...");
+function configureAutoUpdater(): void {
   autoUpdater.logger = log;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on("error", (error) => {
     log.error(`Auto updater error: ${error}`);
   });
 
-  if (shouldAutoInstall()) {
-    autoUpdater.checkForUpdatesAndNotify().catch((error) => {
-      log.error(`Unable to run auto updater: ${error}`);
-    });
-  } else {
-    autoUpdater.autoDownload = false;
+  autoUpdater.on("update-available", (info) => {
+    log.info("Update available:", info);
+  });
 
-    autoUpdater.on("update-available", (info) => {
-      log.info("Update available:", info);
+  autoUpdater.on("update-downloaded", (info) => {
+    log.info("Update downloaded:", info);
+  });
+}
 
-      const downloadUrl = getDownloadUrl();
+function checkForUpdates(): void {
+  log.info("Checking for updates...");
+  configureAutoUpdater();
 
-      showNotification(
-        "Update Available",
-        "A new version of BreakTimer is available. Click to download.",
-        () => {
-          shell.openExternal(downloadUrl).catch((error) => {
-            log.error(`Failed to open download URL: ${error}`);
-          });
-        },
-        false,
-      );
-    });
-
-    autoUpdater.checkForUpdates().catch((error) => {
-      log.error(`Unable to check for updates: ${error}`);
-    });
-  }
+  autoUpdater.checkForUpdatesAndNotify().catch((error) => {
+    log.error(`Unable to run auto updater: ${error}`);
+    log.error(`Releases: ${GITHUB_RELEASES_URL}`);
+  });
 }
 
 if (process.env.NODE_ENV === "production") {
@@ -96,16 +68,6 @@ if (
 ) {
   electronDebug();
 }
-
-// function installExtensions() {
-//   const installer = require('electron-devtools-installer')
-//   const forceDownload = !!process.env.UPGRADE_EXTENSIONS
-//   const extensions = ['REACT_DEVELOPER_TOOLS']
-//
-//   return Promise.all(
-//     extensions.map(name => installer.default(installer[name], forceDownload))
-//   ).catch(console.log)
-// }
 
 // Don't exit on close all windows - live in tray
 app.on("window-all-closed", () => {
@@ -123,7 +85,7 @@ app.on("ready", async () => {
 
   // Required for notifications to work on windows
   if (process.platform === "win32") {
-    app.setAppUserModelId("com.tomjwatson.breaktimer");
+    app.setAppUserModelId(APP_ID);
   }
 
   if (process.platform === "darwin") {

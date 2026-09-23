@@ -94,15 +94,23 @@ This will push all relevant assets to a draft release on GitHub.
 
 #### Windows
 
-The Windows build can be built from a linux box. There are a few dependencies requried, see https://www.electron.build/multi-platform-build#to-build-app-for-windows-on-linux.
-
-Then run:
+The Windows NSIS installer can be built from Linux or Windows. For Intune, prefer a Windows builder.
 
 ```bash
 GH_TOKEN=<github token> npm run publish-win
 ```
 
-This will push all relevant assets to a draft release on GitHub.
+That publishes `LAQBreakTimer-Setup-<version>.exe` and `latest.yml` so installed apps can auto-update. Tagging `v*` also runs `.github/workflows/release.yml`.
+
+To also wrap the installer as an MSI (WiX required):
+
+```bash
+npm run package-win-intune
+```
+
+See the Intune section in [README.md](README.md) for silent install, uninstall, and detection values.
+
+This will push all relevant assets to a GitHub release.
 
 #### Linux
 

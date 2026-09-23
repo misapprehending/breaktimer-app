@@ -1,5 +1,6 @@
-import SettingsCard from "./settings-card";
+import { APP_NAME } from "../../../types/branding";
 import { Settings } from "../../../types/settings";
+import SettingsCard from "./settings-card";
 
 interface StartupCardProps {
   settingsDraft: Settings;
@@ -13,7 +14,7 @@ export default function StartupCard({
   return (
     <SettingsCard
       title="Start at login"
-      helperText="Automatically start BreakTimer when you log into your computer."
+      helperText={`Automatically start ${APP_NAME} when you log into your computer.`}
       toggle={{
         checked: settingsDraft.autoLaunch,
         onCheckedChange: (checked) => onSwitchChange("autoLaunch", checked),

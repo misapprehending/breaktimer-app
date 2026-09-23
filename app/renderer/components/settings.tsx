@@ -1,5 +1,6 @@
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useEffect, useMemo, useState } from "react";
+import { BRAND_BACKGROUND_COLOR, BRAND_TEXT_COLOR } from "../../types/branding";
 import {
   NotificationType,
   Settings,
@@ -114,8 +115,8 @@ export default function SettingsEl() {
   const handleResetColors = (): void => {
     setSettingsDraft({
       ...settingsDraft,
-      textColor: "#ffffff",
-      backgroundColor: "#16a085",
+      textColor: BRAND_TEXT_COLOR,
+      backgroundColor: BRAND_BACKGROUND_COLOR,
       backdropOpacity: 0.7,
     });
   };

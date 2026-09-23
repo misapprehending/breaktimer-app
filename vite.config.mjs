@@ -25,6 +25,10 @@ export default defineConfig({
     host: "localhost",
   },
   test: {
-    include: ["**/*.test.ts", "../main/lib/**/*.test.ts"],
+    include: [
+      "**/*.test.ts",
+      "../main/lib/**/*.test.ts",
+      "../types/**/*.test.ts",
+    ],
   },
 });

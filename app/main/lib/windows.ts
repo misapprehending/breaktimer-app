@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Display, Rectangle, screen } from "electron";
 import log from "electron-log";
 import path from "path";
+import { APP_NAME } from "../../types/branding";
 import { isDeskReminderType } from "../../types/settings";
 import { endPopupBreak, wasStartedFromTray } from "./breaks";
 import { getSettings } from "./store";
@@ -55,7 +56,7 @@ export function createSettingsWindow(): void {
   }
 
   settingsWindow = new BrowserWindow({
-    title: "BreakTimer — Settings",
+    title: `${APP_NAME} — Settings`,
     show: false,
     width: 580,
     minWidth: 580,
