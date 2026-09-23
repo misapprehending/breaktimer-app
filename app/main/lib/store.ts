@@ -1,4 +1,5 @@
 import Store from "electron-store";
+import { applyBrandColorMigration } from "../../types/branding";
 import { defaultSettings, Settings } from "../../types/settings";
 import { setAutoLauch } from "./auto-launch";
 import { initBreaks, resetTimeSinceLastBreak } from "./breaks";
@@ -97,6 +98,13 @@ const migrations: Migration[] = [
         }
       }
       return settings;
+    },
+  },
+  {
+    version: 3,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    migrate: (settings: any) => {
+      return applyBrandColorMigration(settings);
     },
   },
 ];

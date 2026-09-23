@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "../../types/branding";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,7 @@ export default function WelcomeModal({ open, onClose }: WelcomeModalProps) {
         showCloseButton={false}
       >
         <DialogHeader className="text-left">
-          <DialogTitle>BreakTimer runs in the background</DialogTitle>
+          <DialogTitle>{APP_NAME} runs in the background</DialogTitle>
           <DialogDescription className="text-base leading-relaxed text-balance pt-2">
             The app can be accessed via your system tray.
           </DialogDescription>

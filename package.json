@@ -1,8 +1,8 @@
 {
-  "name": "breaktimer",
+  "name": "laq-breaktimer",
   "version": "2.1.0",
-  "productName": "BreakTimer",
-  "description": "Manage periodic breaks",
+  "productName": "LAQ BreakTimer",
+  "description": "Legal Aid Queensland fork of BreakTimer for managing periodic breaks",
   "scripts": {
     "build": "concurrently \"npm run build-main\" \"npm run build-renderer\"",
     "build-main": "webpack --config webpack.main.config.js",
@@ -20,9 +20,10 @@
     "package-linux": "npm run build && electron-builder build --linux",
     "package-mac": "npm run build && electron-builder build --mac",
     "package-win": "npm run build && electron-builder build --win --x64",
+    "package-win-intune": "npm run build && electron-builder build --x64 --win nsis --win msi-wrapped",
     "publish-linux": "npm run postinstall && npm run build && electron-builder build --linux --publish always",
     "publish-mac": "npm run postinstall && npm run build && electron-builder build --mac --publish always",
-    "publish-win": "npm run postinstall && npm run build && electron-builder build --win --x64 --publish always",
+    "publish-win": "npm run postinstall && npm run build && electron-builder build --win nsis --x64 --publish always",
     "postinstall": "electron-builder install-app-deps",
     "start": "cross-env NODE_ENV=production electron ./app/main/dist/main.prod.js",
     "start-main-dev": "cross-env HOT=1 NODE_ENV=development electron app/main/index.dev.js",
@@ -31,9 +32,9 @@
   "license": "GPL-3.0-or-later",
   "main": "./app/main/dist/main.prod.js",
   "build": {
-    "productName": "BreakTimer",
-    "copyright": "Copyright © 2019 Thomas James Watson",
-    "appId": "com.tomjwatson.breaktimer",
+    "productName": "LAQ BreakTimer",
+    "copyright": "Copyright © 2019 Thomas James Watson. Legal Aid Queensland fork.",
+    "appId": "au.gov.qld.legalaid.breaktimer",
     "files": [
       "!node_modules",
       "dist/renderer/",
@@ -64,7 +65,7 @@
       }
     ],
     "asar": true,
-    "artifactName": "${productName}.${ext}",
+    "artifactName": "${name}-${version}.${ext}",
     "afterPack": "./scripts/afterPack.js",
     "toolsets": {
       "appimage": "1.0.3"
@@ -113,7 +114,25 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "executableName": "LAQBreakTimer"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "runAfterFinish": false,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "LAQ BreakTimer",
+      "uninstallDisplayName": "LAQ BreakTimer",
+      "artifactName": "LAQBreakTimer-Setup-${version}.${ext}"
+    },
+    "msiWrapped": {
+      "perMachine": true,
+      "runAfterFinish": false,
+      "impersonate": false,
+      "wrappedInstallerArgs": "/S /allusers",
+      "upgradeCode": "{A7C3E91B-4D2F-4B6A-9C18-2E5F7A1D8B44}",
+      "artifactName": "LAQBreakTimer-${version}.${ext}"
     },
     "linux": {
       "target": [
@@ -123,7 +142,7 @@
         "rpm",
         "tar.gz"
       ],
-      "executableName": "breaktimer",
+      "executableName": "laq-breaktimer",
       "category": "Utility"
     },
     "snap": {
@@ -136,20 +155,21 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "tom-james-watson",
+      "owner": "misapprehending",
       "repo": "breaktimer-app",
-      "private": false
+      "private": false,
+      "releaseType": "release"
     }
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/tom-james-watson/breaktimer-app.git"
+    "url": "git+ssh://git@github.com/misapprehending/breaktimer-app.git"
   },
   "bugs": {
-    "url": "https://github.com/tom-james-watson/breaktimer-app/issues"
+    "url": "https://github.com/misapprehending/breaktimer-app/issues"
   },
   "author": "Tom Watson <tom@tomjwatson.com>",
-  "homepage": "https://github.com/tom-james-watson/breaktimer-app",
+  "homepage": "https://github.com/misapprehending/breaktimer-app",
   "engines": {
     "node": ">=22.13.0"
   },
@@ -173,7 +193,6 @@
     "electron-debug": "^4.1.0",
     "electron-devtools-installer": "^4.0.0",
     "electron-log": "^5.4.4",
-    "electron-updater": "^6.8.9",
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",

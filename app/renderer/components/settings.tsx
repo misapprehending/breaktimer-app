@@ -1,5 +1,6 @@
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useEffect, useMemo, useState } from "react";
+import { BRAND_BACKGROUND_COLOR, BRAND_TEXT_COLOR } from "../../types/branding";
 import {
   NotificationType,
   Settings,
@@ -27,6 +28,7 @@ export default function SettingsEl() {
   const [settingsDraft, setSettingsDraft] = useState<Settings | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -37,6 +39,7 @@ export default function SettingsEl() {
       // Check if this is the first time running the app
       const appInitialized = await ipcRenderer.invokeGetAppInitialized();
       setShowWelcomeModal(!appInitialized);
+      setAppVersion(await ipcRenderer.invokeGetAppVersion());
     })();
   }, []);
 
@@ -114,8 +117,8 @@ export default function SettingsEl() {
   const handleResetColors = (): void => {
     setSettingsDraft({
       ...settingsDraft,
-      textColor: "#ffffff",
-      backgroundColor: "#16a085",
+      textColor: BRAND_TEXT_COLOR,
+      backgroundColor: BRAND_BACKGROUND_COLOR,
       backdropOpacity: 0.7,
     });
   };
@@ -165,7 +168,11 @@ export default function SettingsEl() {
         defaultValue="break-settings"
         className="w-full h-full flex flex-col"
       >
-        <SettingsHeader handleSave={handleSave} showSave={dirty} />
+        <SettingsHeader
+          handleSave={handleSave}
+          showSave={dirty}
+          version={appVersion}
+        />
         <div className="flex-1 overflow-auto p-6 min-h-0">
           <TabsContent value="break-settings" className="m-0 space-y-8">
             <BreaksCard

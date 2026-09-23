@@ -51,6 +51,9 @@ process.once("loaded", () => {
     invokeSetAppInitialized: () => {
       return ipcRenderer.invoke("APP_INITIALIZED_SET");
     },
+    invokeGetAppVersion: () => {
+      return ipcRenderer.invoke("APP_VERSION_GET");
+    },
     invokeBreakStart: () => {
       return ipcRenderer.invoke("BREAK_START");
     },

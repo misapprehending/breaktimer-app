@@ -1,85 +1,91 @@
-# BreakTimer App - https://breaktimer.app
+# LAQ BreakTimer
 
-![](https://img.shields.io/github/downloads/tom-james-watson/breaktimer-app/total?logo=github&style=social)
+Legal Aid Queensland fork of [BreakTimer](https://github.com/tom-james-watson/breaktimer-app). It keeps the same break-reminder behaviour, with LAQ colours and an Intune-ready Windows installer.
 
-🔨 **Looking for contributors** 🔨 If you feel like getting involved, please get in contact!
+Updates are **manual**: build a new installer, then deploy it with Intune. The app does not check GitHub or auto-update itself.
 
-BreakTimer is a desktop application for managing and enforcing periodic breaks. BreakTimer is available for Windows, macOS, and Linux.
+Upstream BreakTimer is GPL-3.0-or-later software by Tom Watson. This fork preserves that license.
 
-BreakTimer allows you to customize:
+## Brand colours
 
-- How long your breaks are and how often do you wish to have them
+Defaults are taken from [legalaid.qld.gov.au](https://www.legalaid.qld.gov.au):
+
+| Token      | Hex       | Use                                          |
+| ---------- | --------- | -------------------------------------------- |
+| Teal       | `#0F8291` | Break overlay, settings primary, Reset Theme |
+| White      | `#FFFFFF` | Break overlay text                           |
+| Navy       | `#002742` | Supporting UI contrast                       |
+| Light teal | `#3DACBA` | Dark-mode primary                            |
+
+Existing installs that still have the upstream default `#16a085` are migrated to `#0F8291` on first launch.
+
+## Versioning and builds
+
+The version shown in Settings, the tray menu, and About is `version` from `package.json`. Electron stamps that into the Windows file version, which Intune can detect.
+
+1. Bump `version` in `package.json` (for example `2.1.0` → `2.1.1`).
+2. Build the installer:
+
+   ```bash
+   npm run package-win
+   ```
+
+   Output: `release/LAQBreakTimer-Setup-<version>.exe`
+
+3. Tagging `v*` also runs `.github/workflows/release.yml`, which publishes that installer as a GitHub Release for IT to download. The app does not consume the release.
+
+On a Windows builder with WiX, you can also wrap the NSIS installer as an MSI:
+
+```bash
+npm run package-win-intune
+```
+
+## Intune (manual updates)
+
+The Windows target is a per-machine NSIS installer. It does not launch the app at the end of setup.
+
+Wrap `LAQBreakTimer-Setup-<version>.exe` with the [Microsoft Win32 Content Prep Tool](https://learn.microsoft.com/en-us/intune/intune-service/apps/apps-win32-app-management).
+
+| Field     | Value                                                                                                 |
+| --------- | ----------------------------------------------------------------------------------------------------- |
+| Install   | `LAQBreakTimer-Setup-2.1.0.exe /S`                                                                    |
+| Uninstall | `"C:\Program Files\LAQ BreakTimer\Uninstall LAQ BreakTimer.exe" /S`                                   |
+| Detection | File `C:\Program Files\LAQ BreakTimer\LAQBreakTimer.exe` version **greater than or equal to** `2.1.0` |
+| Context   | System                                                                                                |
+
+To ship a new version:
+
+1. Build `LAQBreakTimer-Setup-<new-version>.exe`.
+2. Create a new Win32 app (or replace the package) with install command and detection version set to the new version.
+3. **Supersede** the previous Win32 app so Intune replaces it. Do not rely on the app to update itself.
+
+### MSI-wrapped LOB
+
+`package-win-intune` produces `LAQBreakTimer-<version>.msi`:
+
+```text
+msiexec /i LAQBreakTimer-2.1.0.msi /qn /norestart
+```
+
+## Features
+
+Customize:
+
+- How long your breaks are and how often you wish to have them
 - Whether to be reminded with a simple notification or a fullscreen break window
 - Working hours so you are only reminded when you want to be
-- The content of messages shown during breaks.
-- Whether to intelligently restart your break countdown when it detects that you have not been using the computer
+- The content of messages shown during breaks
+- Whether to restart the break countdown when the computer is idle
 
-We do not offer support for enterprise environments or commercial deployment. This software is provided ‘as is’ without any warranties or guarantees of support.
+## Logs and data
 
-## Installation
+Linux: `/home/<USERNAME>/.config/LAQ BreakTimer`
 
-- **Windows** - [BreakTimer.exe](https://github.com/tom-james-watson/breaktimer-app/releases/latest/download/BreakTimer.exe) (Unsigned - you will receive a warning on install, press more info -> run anyway. Will not auto-update)
-- **macOS** - [BreakTimer.dmg](https://github.com/tom-james-watson/breaktimer-app/releases/latest/download/BreakTimer.dmg)
-- **Linux**:
-  - Auto-updating **[preferred]**:
-    - [BreakTimer Snap](https://snapcraft.io/breaktimer) - **also available in the Ubuntu App Store**.
-    - [BreakTimer.AppImage](https://github.com/tom-james-watson/breaktimer-app/releases/latest/download/BreakTimer.AppImage)
-  - Non auto-updating
-    - [BreakTimer.deb](https://github.com/tom-james-watson/breaktimer-app/releases/latest/download/BreakTimer.deb)
-    - [BreakTimer.rpm](https://github.com/tom-james-watson/breaktimer-app/releases/latest/download/BreakTimer.rpm) (untested)
-    - [BreakTimer.tar.gz](https://github.com/tom-james-watson/breaktimer-app/releases/latest/download/BreakTimer.tar.gz)
+macOS: `/Users/<USERNAME>/Library/Application Support/LAQ BreakTimer`
 
-## FAQ
+Windows: `C:\Users\<USERNAME>\AppData\Roaming\LAQ BreakTimer`
 
-### Can I donate to BreakTimer?
-
-Some of you have asked about being able to make a donation towards BreakTimer. That's incredibly generous, but I honestly have no need for monetary donations.
-
-If you’d like to show your appreciation, consider donating to a charity of your choice instead. That way, the money goes where it’s really needed 🫶. If you do, I’d love to hear about it—feel free to email me at contact@breaktimer.app and let me know where you donated.
-
-### Why can't I see the app in the tray?
-
-Some operating systems, such as Linux distributions running plain Gnome (e.g. Fedora) or Pantheon (e.g. Elementary OS), don't support system tray icons. In this case, simply re-run the app to open the settings window. You will lose access to certain functionality only available in the tray menu, but at least this workaround lets you use the app.
-
-### Is there a way to control the app via the command line?
-
-On Linux, if you run the app via the command line there is some basic support for command line arguments:
-
-Disable breaks:
-
-```bash
-breaktimer disable
-```
-
-Enable breaks:
-
-```bash
-breaktimer enable
-```
-
-### How can I pass you my log files to help you debug an issue?
-
-You can find the log file for BreakTimer here:
-
-Linux: `/home/<USERNAME>/.config/BreakTimer/logs/main.log`
-
-macOS: `/Users/<USERNAME>/Library/Logs/BreakTimer/main.log`
-
-Windows: `C:\Users\<USERNAME>\AppData\Roaming\BreakTimer\logs/main.log`
-
-You can either upload this to a cloud service such as Dropbox or Google Drive and enable public sharing, or you can email the file as an attachment to contact@breaktimer.app. The log files do not contain any personally identifying information.
-
-Please try and include a timestamp for roughly when you have seen the issue so that I can find the relevant place in the log file.
-
-### How can I hard reset the app's data
-
-In case a bug has left the UI in an unrecoverable state, you can reset the app data by exiting the app, deleting the below folder, and starting the app again.
-
-Linux: `/home/<USERNAME>/.config/BreakTimer`
-
-macOS: `/Users/<USERNAME>/Library/Application Support/BreakTimer`
-
-Windows: `C:\Users\<USERNAME>\AppData\Roaming\BreakTimer`
+Logs are in a `logs/main.log` folder under that path.
 
 ## Development
 
